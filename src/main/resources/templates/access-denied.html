@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Access Denied</title>
+    <!-- Tailwind CSS from CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+        }
+
+        @keyframes drive {
+            0% {
+                transform: translateX(100vw);
+            }
+            100% {
+                transform: translateX(-150px);
+            }
+        }
+
+        @keyframes ufoFly {
+            0% {
+                transform: translate(-150px, -100px);
+            }
+            40% {
+                transform: translate(250px, 0);
+            }
+            60% {
+                transform: translate(250px, 0);
+            }
+            100% {
+                transform: translate(350px, -100px);
+            }
+        }
+
+        @keyframes beamLight {
+            0%, 35% {
+                opacity: 0;
+                height: 0;
+            }
+            40% {
+                opacity: 0.7;
+                height: 50px;
+            }
+            60% {
+                opacity: 0.7;
+                height: 50px;
+            }
+            65%, 100% {
+                opacity: 0;
+                height: 0;
+            }
+        }
+
+        @keyframes carExplode {
+            0%, 45% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5);
+                opacity: 0.8;
+            }
+            60% {
+                transform: scale(0.8);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes explosion {
+            0%, 45% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            75% {
+                transform: scale(2);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(3);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .animate-bounce {
+            animation: bounce 2s infinite;
+        }
+
+        .animate-drive {
+            animation: drive 10s linear forwards;
+        }
+
+        .animate-ufo-fly {
+            animation: ufoFly 10s ease-in-out forwards;
+        }
+
+        .animate-beam {
+            animation: beamLight 10s ease-in-out forwards;
+        }
+
+        .animate-car-explode {
+            animation: carExplode 10s ease-in-out forwards;
+        }
+
+        .animate-explosion {
+            animation: explosion 10s ease-in-out forwards;
+        }
+
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .dot {
+            position: absolute;
+            background-color: rgba(59, 130, 246, 0.2);
+            border-radius: 50%;
+        }
+
+        #animation-container {
+            position: relative;
+            height: 150px;
+            overflow: hidden;
+        }
+
+        #road {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #9ca3af;
+        }
+
+        #car {
+            position: absolute;
+            bottom: 2px;
+        }
+
+        #ufo {
+            position: absolute;
+            bottom: 60px;
+        }
+
+        #beam {
+            position: absolute;
+            bottom: 20px;
+            left: 32px;
+            width: 30px;
+            background: linear-gradient(to bottom, rgba(167, 243, 208, 0.8), rgba(167, 243, 208, 0));
+            border-radius: 50% 50% 0 0;
+            transform-origin: top center;
+        }
+
+        #explosion {
+            position: absolute;
+            bottom: 15px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, rgba(252, 165, 165, 1) 0%, rgba(239, 68, 68, 0.8) 40%, rgba(153, 27, 27, 0) 70%);
+            border-radius: 50%;
+            transform-origin: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center overflow-hidden relative p-4">
+<!-- Background dots -->
+<div id="background" class="fixed inset-0 -z-10"></div>
+
+<!-- Main Content -->
+<div class="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 relative border-t-4 border-red-500">
+    <div class="flex flex-col items-center">
+        <!-- Lock icon with animation -->
+        <div class="w-24 h-24 mb-6 animate-bounce">
+            <svg class="w-full h-full text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+        </div>
+
+        <div class="text-center">
+            <h1 class="text-4xl font-bold mb-2 text-gray-800">Access Denied</h1>
+            <p class="text-gray-600 mb-6 text-lg">You do not have permission to access this page.</p>
+
+            <!-- UFO and car animation container -->
+            <div id="animation-container" class="w-full mb-8 relative overflow-hidden">
+                <!-- Road -->
+                <div id="road"></div>
+
+                <!-- Car -->
+                <div id="car" class="animate-drive animate-car-explode">
+                    <svg class="w-16 h-16 text-blue-500" viewBox="0 0 640 512" fill="currentColor"
+                         xmlns="http://www.w3.org/2000/svg">
+                        <path d="M488 96H152C130.3 96 112 114.3 112 136V384H72C67.6 384 64 387.6 64 392V424C64 437.3 74.7 448 88 448H104C104 483.3 132.7 512 168 512S232 483.3 232 448H408C408 483.3 436.7 512 472 512S536 483.3 536 448H552C565.3 448 576 437.3 576 424V392C576 387.6 572.4 384 568 384H528V136C528 114.3 509.7 96 488 96ZM168 440C150.3 440 136 425.7 136 408S150.3 376 168 376S200 390.3 200 408S185.7 440 168 440ZM472 440C454.3 440 440 425.7 440 408S454.3 376 472 376S504 390.3 504 408S489.7 440 472 440ZM544 352H496V176C496 167.2 503.2 160 512 160S528 167.2 528 176V336C528 344.8 520.8 352 512 352H544ZM240 352H144V176C144 167.2 151.2 160 160 160H240C248.8 160 256 167.2 256 176V336C256 344.8 248.8 352 240 352ZM368 352H272V176C272 167.2 279.2 160 288 160H368C376.8 160 384 167.2 384 176V336C384 344.8 376.8 352 368 352Z"></path>
+                    </svg>
+                </div>
+
+                <!-- UFO -->
+                <div id="ufo" class="animate-ufo-fly">
+                    <svg class="w-20 h-20 text-indigo-500" viewBox="0 0 24 24" fill="currentColor"
+                         xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 14h-10c-1.1 0-2-.9-2-2s.9-2 2-2h10c1.1 0 2 .9 2 2s-.9 2-2 2z"/>
+                        <path d="M12 8c3.31 0 6 1.34 6 3s-2.69 3-6 3-6-1.34-6-3 2.69-3 6-3z"/>
+                        <ellipse cx="12" cy="11" rx="3" ry="1" fill="#6366F1"/>
+                        <path d="M7 11.7V14h10v-2.3c1.16-.41 2-1.07 2-1.7 0-1.66-3.13-3-7-3S5 8.34 5 10c0 .63.84 1.29 2 1.7z"
+                              fill="#818CF8"/>
+                    </svg>
+
+                    <!-- UFO Beam -->
+                    <div id="beam" class="animate-beam"></div>
+                </div>
+
+                <!-- Explosion -->
+                <div id="explosion" class="animate-explosion"></div>
+            </div>
+
+            <div class="flex flex-col space-y-4">
+                <button id="replay-button"
+                        class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Replay Animation
+                </button>
+                <button id="back-button"
+                        class="px-6 py-3 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                    Go Back
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Create background dots
+    const background = document.getElementById('background');
+    for (let i = 0; i < 30; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot animate-float';
+
+        // Random size between 5px and 15px
+        const size = Math.random() * 10 + 5;
+        dot.style.width = `${size}px`;
+        dot.style.height = `${size}px`;
+
+        // Random position
+        dot.style.left = `${Math.random() * 100}%`;
+        dot.style.top = `${Math.random() * 100}%`;
+
+        // Random animation delay
+        dot.style.animationDelay = `${Math.random() * 5}s`;
+
+        background.appendChild(dot);
+    }
+
+    // Replay animation button
+    document.getElementById('replay-button').addEventListener('click', function () {
+        const car = document.getElementById('car');
+        const ufo = document.getElementById('ufo');
+        const beam = document.getElementById('beam');
+        const explosion = document.getElementById('explosion');
+
+        // Reset animations by removing and re-adding classes
+        car.classList.remove('animate-drive', 'animate-car-explode');
+        ufo.classList.remove('animate-ufo-fly');
+        beam.classList.remove('animate-beam');
+        explosion.classList.remove('animate-explosion');
+
+        // Trigger reflow to restart animations
+        void car.offsetWidth;
+        void ufo.offsetWidth;
+        void beam.offsetWidth;
+        void explosion.offsetWidth;
+
+        // Add animation classes back
+        car.classList.add('animate-drive', 'animate-car-explode');
+        ufo.classList.add('animate-ufo-fly');
+        beam.classList.add('animate-beam');
+        explosion.classList.add('animate-explosion');
+    });
+
+    // Back button functionality
+    document.getElementById('back-button').addEventListener('click', function () {
+        const isLoggedIn = localStorage.getItem('isLoggedIn');
+        const role = localStorage.getItem('userRole');
+         if (!isLoggedIn) {
+            window.location.href = `/login-form`;
+        } else if (role === 'Admin') {
+            window.location.href = `/admin-dashboard`;
+        } else if (role === 'Passenger') {
+            window.location.href = `/passenger-dashboard`;
+        } else {
+            window.history.back();
+        }
+    });
+</script>
+</body>
+</html>

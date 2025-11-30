@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/images/logo.png"
+          style="border-radius: 50%; width:100px; height:100px ; object-fit:cover ">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="/css/style.css">
+
+    <title>Shareview</title>
+
+</head>
+
+<body>
+<div class="wrapper">
+    <nav class="nav">
+        <div class="nav-logo-name">
+            <p>Shareview</p>
+        </div>
+    </nav>
+    <div class="form-box">
+        <!-- LOGIN CONTAINER -->
+        <div class="login-container" id="login">
+            <div class="login-split">
+                <header>Welcome Back!</header>
+                <p class="welcome-text">Sign in to find a reviewer for you.</p>
+            </div>
+
+            <div class="login-split">
+                <div class="input-box1">
+                    <input type="text" class="form-control" id="login-email" placeholder="Email">
+                    <i class="bx bx bx-envelope"></i>
+                </div>
+
+                <div class="input-box1">
+                    <i class="bx bx-hide" id="toggle-login-password" onclick="togglePassword('login-password', 'toggle-login-password')"></i>
+                    <input type="password" class="form-control" id="login-password" placeholder="Password">
+                    <i class="bx bx-lock-alt"></i>
+                </div>
+
+                <div class="two-btn">
+                    <div class="one">
+                        <input type="checkbox" id="remember-me">
+                        <label for="remember-me">Remember Me</label>
+                    </div>
+                    <div class="two">
+                        <a href="#" onclick="forgotPassword()">Forgot password?</a>
+                    </div>
+                </div>
+
+                <div class="submit">
+                    <button id="loginBtn" onclick="signIn()">Log In</button>
+                </div>
+
+                <div class="bottom">
+                    <span>Don't have an account? <a href="#" onclick="signup()">Sign Up</a></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- REGISTER CONTAINER -->
+        <div class="register-container" id="register">
+            <div class="top">
+                <header>Create Your Account</header>
+                <p class="welcome-text">It's quick and easy.</p>
+            </div>
+
+            <div class="form-one">
+                <div class="input-box1">
+                    <input type="text" class="form-control" placeholder="First Name">
+                    <i class="bx bx-user"></i>
+                </div>
+                <div class="input-box1">
+                    <input type="text" class="form-control" placeholder="Last Name">
+                    <i class="bx bx-user"></i>
+                </div>
+            </div>
+
+            <div class="input-box1">
+                <input type="text" class="form-control" id="signup-email" placeholder="Email">
+                <i class="bx bx-envelope"></i>
+            </div>
+
+            <div class="form-one">
+                <!-- Birthday Field -->
+                <div class="input-box1">
+                    <input type="date" class="form-control" id="birthday" placeholder="Birthday">
+                    <i class="bx bx-calendar"></i>
+                </div>
+
+                <!-- Gender Field -->
+                <div class="input-box1">
+                    <label for="gender"></label>
+                    <select class="form-control" id="gender">
+                        <option value="" disabled selected>Select Gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="custom">Rather not say</option>
+                    </select>
+                    <i class="bx bx-user-circle"></i>
+                </div>
+            </div>
+
+            <div class="input-box1">
+                <input type="password" class="form-control" id="signup-password" placeholder="Password">
+                <i class="bx bx-lock-alt"></i>
+            </div>
+
+            <div class="input-box1">
+                <input type="password" class="form-control" id="confirm-password" placeholder="Confirm Password">
+                <i class="bx bx-lock-alt"></i>
+                <i class="bx bx-hide" id="toggle-confirm-password" onclick="togglePassword('confirm-password', 'toggle-confirm-password')"></i>
+            </div>
+
+            <div class="submit">
+                <button type="button" id="signupBtn" onclick="register()">Register</button>
+            </div>
+
+            <div class="bottom">
+                <span><a href="#">Terms and Conditions</a></span>
+            </div>
+
+            <div class="bottom">
+                <span>Have an account? <a href="#" onclick="login()">Login</a></span>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- OTP Modal -->
+<div id="otpModal" class="otp-modal hidden">
+    <div class="otp-modal-content">
+        <h2>Enter 6-Digit OTP</h2>
+        <input type="text" id="otp-input" maxlength="6" placeholder="Enter OTP">
+        <div class="otp-buttons">
+            <button onclick="closeOtpModal()" class="cancel-btn">Cancel</button>
+            <button id="verify-btn" class="verify-btn">Verify</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Form -->
+<div id="resetPasswordSection" class="reset-modal hidden">
+    <div class="reset-modal-content">
+        <h2>Reset Password</h2>
+        <input type="password" id="new-password" placeholder="New password">
+        <input type="password" id="confirm-new-password" placeholder="Confirm new password">
+        <div class="reset-buttons">
+            <button onclick="resetPassword()" class="verify-btn">Reset Password</button>
+            <button onclick="closeResetPasswordModal()" class="cancel-btn">Cancel</button>
+        </div>
+    </div>
+</div>
+<script src="/js/script.js"></script>
+<script src="/js/modal.js"></script>
+<script src="/js/login.js"></script>
+<script>
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    const role = localStorage.getItem('userRole');
+    const path = window.location.pathname;
+
+    // Redirect function (can be modified)
+    function denyAccess() {
+        window.location.href = "/access-denied"
+    }
+
+    if (path.includes('/login-form') && isLoggedIn === "true") {
+        denyAccess();
+    } else if (path.includes("/admin-dashboard") && role !== "Admin") {
+        denyAccess();
+    } else if (path.includes("/main-feed") && role !== "User") {
+        denyAccess();
+    }
+</script>
+</body>
+</html>

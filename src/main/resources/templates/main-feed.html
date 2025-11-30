@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shareview - Main Feed</title>
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link href="/css/main-feed.css" rel="stylesheet">
+    <link href="/css/comment-section.css" rel="stylesheet">
+</head>
+<body>
+<!-- Navigation Bar -->
+<nav class="navbar">
+    <button class="toggle-left-sidebar-btn" id="toggleLeftSidebarBtn" onclick="toggleLeftSidebar()">
+        <i class='bx bx-menu'></i>
+    </button>
+
+    <div class="logo">Shareview</div>
+
+    <div class="nav-center">
+        <div class="search-box">
+            <input type="text" placeholder="Search posts, users, topics...">
+            <i class='bx bx-search search-icon' onclick="activateMobileSearch()"></i>
+            <i class='bx bx-x search-close' onclick="deactivateMobileSearch()"></i>
+        </div>
+    </div>
+
+    <div class="nav-right">
+        <div style="position: relative;">
+            <i class='bx bx-bell nav-icon'></i>
+            <span class="badge">3</span>
+        </div>
+
+        <div class="create-post-btn" onclick="toggleCreatePost()">
+            <i class='bx bx-plus'></i>
+        </div>
+
+        <div class="profile-container">
+            <div class="profile-pic" onclick="toggleProfileDropdown()">JD</div>
+
+            <div class="profile-dropdown" id="profileDropdown">
+                <a href="#" class="dropdown-item" onclick="showProfile(event)">
+                    <i class='bx bx-user'></i><span>My Profile</span>
+                </a>
+                <a href="#" class="dropdown-item">
+                    <i class='bx bx-cog'></i><span>Settings</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item" onclick="logout()">
+                    <i class='bx bx-log-out'></i><span>Logout</span>
+                </a>
+            </div>
+        </div>
+        <button class="toggle-right-sidebar-btn" id="toggleRightSidebarBtn" onclick="toggleRightSidebar()">
+            <i class='bx bx-history'></i>
+        </button>
+    </div>
+</nav>
+
+<!-- Main Container -->
+<div class="container">
+    <!-- Left Sidebar -->
+    <aside class="left-sidebar" id="leftSidebar">
+        <div class="sidebar-card user-profile-card">
+            <div class="user-avatar">JD</div>
+            <div class="user-name">John Doe</div>
+            <div class="user-email">john.doe@email.com</div>
+        </div>
+
+        <div class="sidebar-card">
+            <a href="#" class="menu-item active" data-tab="newsFeed" onclick="backHome()"><i class='bx bx-home-alt'></i><span>Home</span></a>
+            <a href="#" class="menu-item" onclick="openSavedPosts(event)">
+                <i class='bx bx-bookmark'></i><span>Saved Posts</span>
+            </a>
+            <a href="#" class="menu-item" onclick="openLikedPosts(event)">
+                <i class='bx bx-like'></i><span>Liked Posts</span>
+            </a>
+        </div>
+
+        <div class="sidebar-card trending-section">
+            <div class="section-title">Trending Topics</div>
+            <div class="trending-list">
+                <div class="trending-item"><div class="trending-topic">#Mathematics</div><div class="trending-count">1.2K posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#Programming</div><div class="trending-count">956 posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#Physics</div><div class="trending-count">743 posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#StudyTips</div><div class="trending-count">634 posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#Chemistry</div><div class="trending-count">521 posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#Biology</div><div class="trending-count">498 posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#WebDevelopment</div><div class="trending-count">456 posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#DataScience</div><div class="trending-count">423 posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#MachineLearning</div><div class="trending-count">387 posts</div></div>
+                <div class="trending-item"><div class="trending-topic">#English</div><div class="trending-count">356 posts</div></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="footer-links">
+                    <a href="#">About</a>
+                    <a href="#">Privacy</a>
+                    <a href="#">Terms</a>
+                    <a href="#">Help</a>
+                </div>
+                <div>© 2025 Shareview. All rights reserved.</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Center Feed -->
+    <main class="feed" id="feed">
+        <!-- Create Post Form -->
+        <div class="create-post-form" id="createPostForm">
+            <div class="form-header">
+                <div class="form-title">Create Post</div>
+                <div class="close-form" onclick="toggleCreatePost()"><i class='bx bx-x'></i></div>
+            </div>
+
+            <div class="form-group">
+                <label>Post Title</label>
+                <input type="text" placeholder="Enter a catchy title...">
+            </div>
+
+            <div class="form-group">
+                <label>Content</label>
+                <textarea placeholder="Share your knowledge, resources, or ask a question..."></textarea>
+            </div>
+
+            <div class="media-upload">
+                <div class="upload-btn" onclick="handleImageUpload()">
+                    <i class='bx bx-image-alt'></i>
+                    <span>Photo/Image</span>
+                </div>
+                <div class="upload-btn" onclick="handleDocumentUpload()">
+                    <i class='bx bx-file'></i>
+                    <span>Document</span>
+                </div>
+                <div class="upload-btn" onclick="handleVideoUpload()">
+                    <i class='bx bx-video'></i>
+                    <span>Video</span>
+                </div>
+            </div>
+
+            <button class="submit-post-btn">Publish Post</button>
+        </div>
+
+        <!-- News Feed -->
+        <div id="newsFeed">
+
+            <!-- Post Card 1 -->
+            <article class="post-card">
+                <header class="post-header">
+                    <div class="post-avatar">AS</div>
+                    <div class="post-info">
+                        <div class="post-author">Alice Smith</div>
+                        <div class="post-time">2 hours ago</div>
+                    </div>
+                    <i class='bx bx-dots-horizontal-rounded post-menu'></i>
+                </header>
+
+                <div class="post-content">
+                    <h3 class="post-title">Advanced Calculus Study Guide</h3>
+                    <p class="post-text">Here's a comprehensive study guide for Advanced Calculus! Covers differentiation, integration, and series. Hope this helps everyone preparing for finals! 📚✨</p>
+                    <img src="https://via.placeholder.com/600x350/e0e0e0/666666?text=Study+Guide" alt="Study Guide" class="post-image">
+                </div>
+
+                <div class="post-stats"><span><i class='bx bx-like'></i> 45 Likes</span><span><i class='bx bx-comment'></i>12 Comments</span></div>
+
+                <div class="post-actions">
+                    <button class="post-action-btn"><i class='bx bx-like'></i> Like</button>
+                    <button class="post-action-btn"><i class='bx bx-comment'></i> Comment</button>
+                    <button class="post-action-btn"><i class='bx bx-share-alt'></i> Share</button>
+                    <button class="post-action-btn"><i class='bx bx-bookmark'></i> Save</button>
+                </div>
+            </article>
+
+        </div> <!-- end #newsFeed -->
+    </main>
+
+    <!-- Profile Page (hidden by default) -->
+    <section class="profile-page" id="profilePage">
+        <button class="back-to-feed-btn" onclick="showFeed()"><i class='bx bx-arrow-back'></i> Back to Feed</button>
+
+        <div class="profile-header">
+            <div class="profile-banner"></div>
+            <div class="profile-info-section">
+                <div class="profile-main-avatar">JD</div>
+                <div class="profile-actions">
+                    <button class="profile-edit-btn"><i class='bx bx-edit-alt'></i> Edit Profile</button>
+                </div>
+                <div class="profile-details">
+                    <div class="profile-name">John Doe</div>
+                    <div class="profile-username">@johndoe • john.doe@email.com</div>
+                    <div class="profile-bio">Passionate learner and knowledge sharer. Love discussing mathematics, programming, and science. Always looking to collaborate and learn from others!</div>
+                </div>
+
+                <div class="profile-stats">
+                    <div class="stat-item"><span class="stat-number">47</span><span class="stat-label">Posts</span></div>
+                    <div class="stat-item"><span class="stat-number">1.2K</span><span class="stat-label">Followers</span></div>
+                    <div class="stat-item"><span class="stat-number">583</span><span class="stat-label">Following</span></div>
+                    <div class="stat-item"><span class="stat-number">234</span><span class="stat-label">Likes</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-tabs">
+            <button class="profile-tab active" data-tab="posts" onclick="switchProfileTab(event,'posts')">
+                <i class='bx bx-grid-alt'></i> Posts
+            </button>
+            <button class="profile-tab" data-tab="saved" onclick="switchProfileTab(event,'saved')">
+                <i class='bx bx-bookmark'></i> Saved
+            </button>
+            <button class="profile-tab" data-tab="liked" onclick="switchProfileTab(event,'liked')">
+                <i class='bx bx-like'></i> Liked
+            </button>
+        </div>
+
+        <div class="profile-content active" id="postsContent">
+            <div class="empty-state">
+                <i class='bx bx-loader-alt bx-spin'></i>
+                <div class="empty-state-text">Loading posts...</div>
+            </div>
+        </div>
+
+        <div class="profile-content" id="savedContent">
+            <div class="empty-state">
+                <i class='bx bx-bookmark'></i>
+                <div class="empty-state-text">No saved posts yet</div>
+                <div class="empty-state-subtext">Posts you save will appear here</div>
+            </div>
+        </div>
+
+        <div class="profile-content" id="likedContent">
+            <div class="empty-state">
+                <i class='bx bx-like'></i>
+                <div class="empty-state-text">No liked posts yet</div>
+                <div class="empty-state-subtext">Posts you like will appear here</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Right Sidebar -->
+    <aside class="right-sidebar" id="rightSidebar" aria-hidden="false">
+        <div class="recent-posts-card">
+            <div class="sidebar-header"><div class="section-title">Recent Posts Visited</div></div>
+
+            <div class="recent-post-item">
+                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
+                <div class="recent-post-thumb">📚</div>
+                <div class="recent-post-info">
+                    <div class="recent-post-title">Data Structures Cheat Sheet</div>
+                    <div class="recent-post-author">By Sarah Chen</div>
+                    <div class="recent-post-time">Visited 10 min ago</div>
+                </div>
+            </div>
+
+            <div class="recent-post-item">
+                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
+                <div class="recent-post-thumb">💻</div>
+                <div class="recent-post-info">
+                    <div class="recent-post-title">Python Basics Tutorial</div>
+                    <div class="recent-post-author">By David Lee</div>
+                    <div class="recent-post-time">Visited 30 min ago</div>
+                </div>
+            </div>
+
+            <div class="recent-post-item">
+                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
+                <div class="recent-post-thumb">🧪</div>
+                <div class="recent-post-info">
+                    <div class="recent-post-title">Organic Chemistry Notes</div>
+                    <div class="recent-post-author">By Emma Wilson</div>
+                    <div class="recent-post-time">Visited 1 hour ago</div>
+                </div>
+            </div>
+
+            <div class="recent-post-item">
+                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
+                <div class="recent-post-thumb">📐</div>
+                <div class="recent-post-info">
+                    <div class="recent-post-title">Geometry Formulas Guide</div>
+                    <div class="recent-post-author">By Mark Taylor</div>
+                    <div class="recent-post-time">Visited 2 hours ago</div>
+                </div>
+            </div>
+
+            <div class="recent-post-item">
+                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
+                <div class="recent-post-thumb">🌍</div>
+                <div class="recent-post-info">
+                    <div class="recent-post-title">World History Timeline</div>
+                    <div class="recent-post-author">By Lisa Brown</div>
+                    <div class="recent-post-time">Visited yesterday</div>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+</div> <!-- end .container -->
+
+<!-- JavaScript -->
+<script src="/js/main-feed.js"></script>
+<script src="/js/modal.js"></script>
+
+</body>
+</html>
