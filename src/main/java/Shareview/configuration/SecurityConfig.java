@@ -14,11 +14,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll() // ← Allow EVERYTHING without authentication
-            );
-        
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.disable()) // Also try disabling CORS temporarily
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/**").permitAll() // ← Allow EVERYTHING
+                );
+
         return http.build();
     }
 }
