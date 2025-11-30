@@ -35,10 +35,25 @@ function toggleCreatePost() {
     }
 }
 
-function toggleProfileDropdown() {
+function toggleProfileDropdown(event) {
+    if (event) {
+        event.stopPropagation(); // Prevent immediate closing
+    }
     const dropdown = document.getElementById('profileDropdown');
-    if (!dropdown) return;
-    dropdown.classList.toggle('active');
+    if (!dropdown) {
+        console.error('Profile dropdown element not found');
+        return;
+    }
+
+    // Toggle the active class
+    const isActive = dropdown.classList.toggle('active');
+    console.log('Dropdown toggled:', isActive);
+
+    // Optional: Add visual feedback to the profile pic
+    const profilePic = event ? event.currentTarget : document.querySelector('.profile-pic');
+    if (profilePic) {
+        profilePic.classList.toggle('active', isActive);
+    }
 }
 
 function toggleLeftSidebar() {
@@ -298,6 +313,9 @@ function validateFileSize(file, type) {
 // ============================================
 // ENHANCED FILE PREVIEW WITH CAROUSEL LAYOUT
 // ============================================
+// ============================================
+// ENHANCED FILE PREVIEW WITH CAROUSEL LAYOUT
+// ============================================
 
 function showFilePreview(type, file, compressionInfo = null) {
     let previewContainer = document.querySelector('.file-preview-container');
@@ -306,16 +324,16 @@ function showFilePreview(type, file, compressionInfo = null) {
         previewContainer = document.createElement('div');
         previewContainer.className = 'file-preview-container';
         previewContainer.innerHTML = `
-            <div class="carousel-controls">
-                <button class="carousel-btn prev-btn" onclick="scrollCarousel(-1)">
+            <div class="preview-carousel-wrapper">
+                <button class="preview-carousel-btn prev-btn" onclick="scrollPreviewCarousel(-1)">
                     <i class='bx bx-chevron-left'></i>
                 </button>
-                <button class="carousel-btn next-btn" onclick="scrollCarousel(1)">
+                <div class="file-previews-scroll">
+                    <div class="file-previews-inner"></div>
+                </div>
+                <button class="preview-carousel-btn next-btn" onclick="scrollPreviewCarousel(1)">
                     <i class='bx bx-chevron-right'></i>
                 </button>
-            </div>
-            <div class="file-previews-scroll">
-                <div class="file-previews-inner"></div>
             </div>
             <div class="total-size-indicator">
                 Total: ${formatFileSize(calculateTotalFileSize())} / 100MB
@@ -338,18 +356,18 @@ function showFilePreview(type, file, compressionInfo = null) {
             preview.innerHTML = `
                 <div class="preview-image-wrapper">
                     <img src="${e.target.result}" alt="Preview" class="preview-image">
-                    <div class="file-info">
-                        <span class="file-name">${file.name}</span>
-                        <span class="file-size">${formatFileSize(file.size)}</span>
-                        ${compressionInfo ? `<span class="compression-badge">Compressed (${compressionInfo.savings}%)</span>` : ''}
-                    </div>
-                    <button class="remove-file-btn" onclick="removeFile('${type}', '${file.name}')">
+                    <button class="remove-file-btn" onclick="removeFile('${type}', \`${file.name.replace(/`/g, '\\`')}\`)">
                         <i class='bx bx-x'></i>
                     </button>
                 </div>
+                <div class="file-info">
+                    <span class="file-name" title="${file.name}">${file.name}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                    ${compressionInfo ? `<span class="compression-badge">Compressed (${compressionInfo.savings}%)</span>` : ''}
+                </div>
             `;
             previewsInner.appendChild(preview);
-            updateCarouselControls();
+            updatePreviewCarouselControls();
             updateTotalSizeIndicator();
         };
         reader.readAsDataURL(file);
@@ -359,89 +377,84 @@ function showFilePreview(type, file, compressionInfo = null) {
             preview.innerHTML = `
                 <div class="preview-video-wrapper">
                     <video src="${e.target.result}" class="preview-video" controls></video>
-                    <div class="file-info">
-                        <span class="file-name">${file.name}</span>
-                        <span class="file-size">${formatFileSize(file.size)}</span>
-                        ${compressionInfo ? `<span class="compression-badge">Compressed (${compressionInfo.savings}%)</span>` : ''}
-                    </div>
-                    <button class="remove-file-btn" onclick="removeFile('${type}', '${file.name}')">
+                    <button class="remove-file-btn" onclick="removeFile('${type}', \`${file.name.replace(/`/g, '\\`')}\`)">
                         <i class='bx bx-x'></i>
                     </button>
                 </div>
+                <div class="file-info">
+                    <span class="file-name" title="${file.name}">${file.name}</span>
+                    <span class="file-size">${formatFileSize(file.size)}</span>
+                    ${compressionInfo ? `<span class="compression-badge">Compressed (${compressionInfo.savings}%)</span>` : ''}
+                </div>
             `;
             previewsInner.appendChild(preview);
-            updateCarouselControls();
+            updatePreviewCarouselControls();
             updateTotalSizeIndicator();
         };
         reader.readAsDataURL(file);
     } else {
         preview.innerHTML = `
             <div class="preview-document">
-                <i class='bx bx-file'></i>
+                <div class="preview-document-icon">
+                    <i class='bx bx-file'></i>
+                </div>
                 <div class="file-info">
-                    <div class="file-name">${file.name}</div>
+                    <div class="file-name" title="${file.name}">${file.name}</div>
                     <div class="file-size">${formatFileSize(file.size)}</div>
                 </div>
-                <button class="remove-file-btn" onclick="removeFile('${type}', '${file.name}')">
+                <button class="remove-file-btn" onclick="removeFile('${type}', \`${file.name.replace(/`/g, '\\`')}\`)">
                     <i class='bx bx-x'></i>
                 </button>
             </div>
         `;
         previewsInner.appendChild(preview);
-        updateCarouselControls();
+        updatePreviewCarouselControls();
         updateTotalSizeIndicator();
     }
 }
 
-// Carousel functionality
-function scrollCarousel(direction) {
+// Carousel scroll functionality
+function scrollPreviewCarousel(direction) {
     const scrollContainer = document.querySelector('.file-previews-scroll');
     if (!scrollContainer) return;
 
-    const scrollAmount = 300; // Adjust based on your item width
+    const scrollAmount = 180; // Width of one item + gap
     scrollContainer.scrollLeft += direction * scrollAmount;
-    updateCarouselControls();
+
+    setTimeout(() => {
+        updatePreviewCarouselControls();
+    }, 100);
 }
 
-function updateCarouselControls() {
+function updatePreviewCarouselControls() {
     const scrollContainer = document.querySelector('.file-previews-scroll');
-    const prevBtn = document.querySelector('.prev-btn');
-    const nextBtn = document.querySelector('.next-btn');
+    const prevBtn = document.querySelector('.preview-carousel-btn.prev-btn');
+    const nextBtn = document.querySelector('.preview-carousel-btn.next-btn');
 
     if (!scrollContainer || !prevBtn || !nextBtn) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
 
-    prevBtn.style.display = scrollLeft > 0 ? 'flex' : 'none';
-    nextBtn.style.display = scrollLeft < scrollWidth - clientWidth - 10 ? 'flex' : 'none';
-}
+    // Show/hide buttons based on scroll position
+    if (scrollLeft <= 10) {
+        prevBtn.style.opacity = '0';
+        prevBtn.style.pointerEvents = 'none';
+    } else {
+        prevBtn.style.opacity = '1';
+        prevBtn.style.pointerEvents = 'auto';
+    }
 
-function updateTotalSizeIndicator() {
-    const indicator = document.querySelector('.total-size-indicator');
-    if (indicator) {
-        const totalSize = calculateTotalFileSize();
-        const percentage = (totalSize / FILE_LIMITS.TOTAL) * 100;
-        indicator.innerHTML = `
-            Total: ${formatFileSize(totalSize)} / 100MB
-            <div class="size-progress">
-                <div class="size-progress-bar" style="width: ${Math.min(percentage, 100)}%"></div>
-            </div>
-        `;
-
-        // Change color based on usage
-        const progressBar = indicator.querySelector('.size-progress-bar');
-        if (percentage > 80) {
-            progressBar.style.background = '#dc3545';
-        } else if (percentage > 60) {
-            progressBar.style.background = '#ffc107';
-        } else {
-            progressBar.style.background = '#28a745';
-        }
+    if (scrollLeft >= scrollWidth - clientWidth - 10) {
+        nextBtn.style.opacity = '0';
+        nextBtn.style.pointerEvents = 'none';
+    } else {
+        nextBtn.style.opacity = '1';
+        nextBtn.style.pointerEvents = 'auto';
     }
 }
-
-// Enhanced remove file function
+// Update the removeFile function to work with the new structure
 function removeFile(type, filename) {
+    // Remove from selected files
     if (type === 'image') {
         selectedFiles.images = selectedFiles.images.filter(item => item.file.name !== filename);
     } else if (type === 'document') {
@@ -450,23 +463,46 @@ function removeFile(type, filename) {
         selectedFiles.videos = selectedFiles.videos.filter(item => item.file.name !== filename);
     }
 
-    // Remove preview
+    // Remove preview element
     const preview = document.querySelector(`[data-filename="${filename}"]`);
     if (preview) {
-        preview.remove();
-    }
+        preview.style.transition = 'opacity 0.3s, transform 0.3s';
+        preview.style.opacity = '0';
+        preview.style.transform = 'scale(0.8)';
 
-    // Update UI
-    updateCarouselControls();
-    updateTotalSizeIndicator();
+        setTimeout(() => {
+            preview.remove();
+            updatePreviewCarouselControls();
+            updateTotalSizeIndicator();
 
-    // Remove container if empty
-    const previewContainer = document.querySelector('.file-preview-container');
-    if (previewContainer && previewContainer.querySelectorAll('.file-preview-item').length === 0) {
-        previewContainer.remove();
+            // Remove container if empty
+            const previewContainer = document.querySelector('.file-preview-container');
+            if (previewContainer && previewContainer.querySelectorAll('.file-preview-item').length === 0) {
+                previewContainer.remove();
+            }
+        }, 300);
     }
 }
 
+// Update total size indicator
+function updateTotalSizeIndicator() {
+    const indicator = document.querySelector('.total-size-indicator');
+    if (indicator) {
+        const totalSize = calculateTotalFileSize();
+        const percentage = (totalSize / FILE_LIMITS.TOTAL) * 100;
+        indicator.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 600;">Total Size:</span>
+                <span style="font-weight: 600; color: ${percentage > 80 ? '#dc3545' : percentage > 60 ? '#ffc107' : '#28a745'};">
+                    ${formatFileSize(totalSize)} / 100MB
+                </span>
+            </div>
+            <div class="size-progress">
+                <div class="size-progress-bar" style="width: ${Math.min(percentage, 100)}%; background: ${percentage > 80 ? '#dc3545' : percentage > 60 ? '#ffc107' : '#28a745'};"></div>
+            </div>
+        `;
+    }
+}
 // ============================================
 // LINK DETECTION IN CONTENT
 // ============================================
@@ -752,6 +788,65 @@ function calculateTotalFileSize() {
 // ============================================
 // UPDATED POST RENDERING WITH LINKS AND CAROUSEL
 // ============================================
+
+function renderPosts(posts) {
+    const newsFeed = document.getElementById('newsFeed');
+    if (!newsFeed) return;
+
+    localStorage.setItem('cachedPosts', JSON.stringify(posts));
+
+    newsFeed.innerHTML = posts.map(post => `
+        <article class="post-card" data-post-id="${post.id}">
+            <header class="post-header">
+                <div class="post-avatar">${getUserInitials(post.user)}</div>
+                <div class="post-info">
+                    <div class="post-author">${post.user.firstName} ${post.user.lastName}</div>
+                    <div class="post-time">${formatTime(post.createdAt)}</div>
+                </div>
+                <i class='bx bx-dots-horizontal-rounded post-menu' onclick="togglePostMenu(event, ${post.id}, ${post.user.id})"></i>
+            </header>
+
+            <div class="post-content">
+                <h3 class="post-title">${escapeHtml(post.title)}</h3>
+                <div class="post-text">${detectLinks(escapeHtml(post.content))}</div>
+                
+                <!-- Files Carousel -->
+                ${renderFilesCarousel(post)}
+            </div>
+
+            <div class="post-stats">
+                <span>${post.likesCount || 0} Likes</span>
+                <span>${post.commentsCount || 0} Comments</span>
+            </div>
+
+            <div class="post-actions">
+                <button class="post-action-btn like-btn" onclick="toggleLike(${post.id}, this)">
+                    <i class='bx bx-like'></i> Like
+                </button>
+                <button class="post-action-btn" onclick="toggleComments(${post.id})">
+                    <i class='bx bx-comment'></i> Comment
+                </button>
+                <button class="post-action-btn">
+                    <i class='bx bx-share-alt'></i> Share
+                </button>
+                <button class="post-action-btn save-btn" onclick="toggleSave(${post.id}, this)">
+                    <i class='bx bx-bookmark'></i> Save
+                </button>
+            </div>
+        </article>
+    `).join('');
+
+    // Initialize carousels for all posts
+    initializePostCarousels();
+
+    // Load post statuses
+    posts.forEach(post => {
+        if (post.id) {
+            loadPostStatus(post.id);
+        }
+    });
+}
+
 function renderFilesCarousel(post) {
     const allFiles = [
         ...(post.imageUrlList || []).map(url => ({ type: 'image', url })),
@@ -802,54 +897,6 @@ function renderFilesCarousel(post) {
 let currentPlayingVideo = null;
 let currentMaximizedVideo = null;
 
-// Enhanced file item rendering with maximize support
-function renderFileItem(file) {
-    const fullUrl = `${API_BASE_URL}${file.url}`;
-    const filename = getFileNameFromUrl(file.url);
-
-    switch (file.type) {
-        case 'image':
-            return `
-                <div class="media-container" onclick="maximizeImage('${fullUrl}', '${filename}')">
-                    <img src="${fullUrl}" alt="${filename}" class="post-file-image" loading="lazy">
-                </div>
-            `;
-
-        case 'video':
-            return `
-                <div class="media-container">
-                    <video class="post-file-video" preload="metadata" 
-                           onclick="handleVideoClick(event, this, '${fullUrl}', '${filename}')">
-                        <source src="${fullUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <div class="video-controls-overlay" onclick="handleVideoControlsClick(event, '${fullUrl}', '${filename}')">
-                        <button class="video-play-btn">
-                            <i class='bx bx-play'></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-
-        case 'document':
-            return `
-                <div class="post-file-document" onclick="openDocument('${fullUrl}')">
-                    <i class='bx bx-file'></i>
-                    <div class="document-info">
-                        <div class="document-name">${filename}</div>
-                        <div class="document-type">Document</div>
-                    </div>
-                    <button class="download-btn" onclick="requestDownloadPermission('${fullUrl}', '${filename}')">
-                        <i class='bx bx-download'></i>
-                    </button>
-                </div>
-            `;
-
-        default:
-            return '';
-    }
-}
-
 // Handle video click (play/pause or maximize)
 function handleVideoClick(event, videoElement, videoUrl, filename) {
     event.stopPropagation();
@@ -871,94 +918,6 @@ function handleVideoControlsClick(event, videoUrl, filename) {
     maximizeVideo(videoUrl, filename);
 }
 
-// Video maximize functionality
-function maximizeVideo(videoUrl, filename) {
-    // Pause any currently playing video
-    if (currentPlayingVideo) {
-        currentPlayingVideo.pause();
-        const container = currentPlayingVideo.closest('.media-container');
-        if (container) {
-            container.classList.remove('video-playing');
-            const playBtn = container.querySelector('.video-play-btn i');
-            if (playBtn) {
-                playBtn.className = 'bx bx-play';
-            }
-        }
-        currentPlayingVideo = null;
-    }
-
-    // Create video maximize modal
-    const modal = document.createElement('div');
-    modal.className = 'video-maximize-modal active';
-    modal.innerHTML = `
-        <div class="maximized-video-container">
-            <video class="maximized-video" controls autoplay>
-                <source src="${videoUrl}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-            <div class="video-maximize-controls">
-                <button class="video-maximize-btn" onclick="requestDownloadPermission('${videoUrl}', '${filename}')">
-                    <i class='bx bx-download'></i>
-                </button>
-                <button class="video-maximize-btn" onclick="closeMaximizedVideo()">
-                    <i class='bx bx-x'></i>
-                </button>
-            </div>
-            <div class="maximized-video-controls">
-                <button class="maximized-control-btn" onclick="toggleMaximizedVideoPlay()">
-                    <i class='bx bx-pause' id="maximizedPlayPause"></i>
-                </button>
-                <button class="maximized-control-btn" onclick="requestDownloadPermission('${videoUrl}', '${filename}')">
-                    <i class='bx bx-download'></i>
-                </button>
-                <button class="maximized-control-btn" onclick="closeMaximizedVideo()">
-                    <i class='bx bx-x'></i>
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const video = modal.querySelector('.maximized-video');
-    currentMaximizedVideo = video;
-
-    // Set up video event listeners
-    video.addEventListener('play', () => {
-        updateMaximizedVideoControls(true);
-    });
-
-    video.addEventListener('pause', () => {
-        updateMaximizedVideoControls(false);
-    });
-
-    video.addEventListener('loadeddata', () => {
-        modal.classList.remove('video-loading');
-    });
-
-    video.addEventListener('waiting', () => {
-        modal.classList.add('video-loading');
-    });
-
-    video.addEventListener('canplay', () => {
-        modal.classList.remove('video-loading');
-    });
-
-    // Close on background click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeMaximizedVideo();
-        }
-    });
-
-    // Close on escape key
-    document.addEventListener('keydown', handleVideoMaximizeKeydown);
-
-    // Auto-play the video
-    video.play().catch(error => {
-        console.error('Error auto-playing maximized video:', error);
-    });
-}
 
 function closeMaximizedVideo() {
     if (currentMaximizedVideo) {
@@ -1002,35 +961,6 @@ function updateMaximizedVideoControls(isPlaying) {
     }
 }
 
-// Enhanced image maximize with download button
-function maximizeImage(imageUrl, filename) {
-    const modal = document.createElement('div');
-    modal.className = 'image-maximize-modal active';
-    modal.innerHTML = `
-        <div class="maximized-image-container">
-            <img src="${imageUrl}" class="maximized-image" onclick="event.stopPropagation()">
-            <div class="maximize-controls">
-                <button class="maximize-btn" onclick="requestDownloadPermission('${imageUrl}', '${filename}')">
-                    <i class='bx bx-download'></i>
-                </button>
-                <button class="maximize-btn" onclick="closeMaximizedImage()">
-                    <i class='bx bx-x'></i>
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeMaximizedImage();
-        }
-    });
-
-    document.addEventListener('keydown', handleMaximizeKeydown);
-}
-
 function closeMaximizedImage() {
     const modal = document.querySelector('.image-maximize-modal');
     if (modal) {
@@ -1042,41 +972,6 @@ function closeMaximizedImage() {
     document.removeEventListener('keydown', handleMaximizeKeydown);
 }
 
-// Download permission system
-function requestDownloadPermission(fileUrl, filename) {
-    // Create download permission modal
-    const modal = document.createElement('div');
-    modal.className = 'download-permission-modal active';
-    modal.innerHTML = `
-        <div class="download-permission-content">
-            <div class="download-permission-title">Download File</div>
-            <div class="download-permission-message">
-                Are you sure you want to download this file?
-            </div>
-            <div class="download-permission-filename">${filename}</div>
-            <div class="download-permission-buttons">
-                <button class="download-permission-btn download-permission-cancel" onclick="closeDownloadPermission()">
-                    Cancel
-                </button>
-                <button class="download-permission-btn download-permission-confirm" onclick="confirmDownload('${fileUrl}', '${filename}')">
-                    Download
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Close on background click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeDownloadPermission();
-        }
-    });
-
-    // Close on escape key
-    document.addEventListener('keydown', handleDownloadPermissionKeydown);
-}
 
 function closeDownloadPermission() {
     const modal = document.querySelector('.download-permission-modal');
@@ -1095,102 +990,9 @@ function handleDownloadPermissionKeydown(e) {
     }
 }
 
-function confirmDownload(fileUrl, filename) {
-    closeDownloadPermission();
-
-    // Add a small delay to allow modal to close
-    setTimeout(() => {
-        downloadFile(fileUrl, filename);
-    }, 100);
-}
-
-// Enhanced download function
-function downloadFile(url, filename) {
-    showTemporaryModal('Downloading...');
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.style.display = 'none';
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Show success message after a short delay
-    setTimeout(() => {
-        showTemporaryModal('Download started!');
-    }, 500);
-}
-
-// Enhanced handle carousel tap
-function handleCarouselTap(event, carousel) {
-    const target = event.target;
-
-    // Check if tap is on video
-    const video = target.closest('video');
-    if (video) {
-        const container = video.closest('.media-container');
-        if (container) {
-            const videoElement = container.querySelector('video');
-            if (videoElement) {
-                toggleVideoPlay(container, videoElement.src);
-            }
-        }
-        return;
-    }
-
-    // Check if tap is on video controls
-    const videoControls = target.closest('.video-controls-overlay');
-    if (videoControls) {
-        const container = videoControls.closest('.media-container');
-        const video = container.querySelector('video');
-        if (video) {
-            const filename = getFileNameFromUrl(video.src);
-            maximizeVideo(video.src, filename);
-        }
-        return;
-    }
-
-    // Check if tap is on image
-    const image = target.closest('img');
-    if (image && image.classList.contains('post-file-image')) {
-        maximizeImage(image.src, image.alt);
-
-    }
-}
-
-// Update document download buttons to use permission system
-function updateDocumentDownloadButtons() {
-    document.querySelectorAll('.download-btn').forEach(btn => {
-        const onclick = btn.getAttribute('onclick');
-        if (onclick && onclick.includes('downloadFile')) {
-            // Extract URL and filename from the onclick attribute
-            const match = onclick.match(/downloadFile\('([^']+)', '([^']+)'\)/);
-            if (match) {
-                const url = match[1];
-                const filename = match[2];
-                btn.setAttribute('onclick', `requestDownloadPermission('${url}', '${filename}')`);
-            }
-        }
-    });
-}
-
-// Initialize download buttons when rendering posts
-function initializeDownloadButtons() {
-    setTimeout(updateDocumentDownloadButtons, 100);
-}
-
-// Call this after rendering posts
-function renderPosts(posts) {
-    // ... existing renderPosts code ...
-
-    // Initialize download buttons
-    initializeDownloadButtons();
-}
 
 // Video play/pause control
-function toggleVideoPlay(container, videoUrl) {
+function toggleVideoPlay(container) {
     const video = container.querySelector('video');
     const playBtn = container.querySelector('.video-play-btn i');
 
@@ -1227,8 +1029,6 @@ function toggleVideoPlay(container, videoUrl) {
         currentPlayingVideo = null;
     }
 }
-
-// Image maximize functionality
 
 function handleMaximizeKeydown(e) {
     if (e.key === 'Escape') {
@@ -1423,7 +1223,6 @@ function initializeCarouselTouchEvents(carousel) {
         const videoControls = e.target.closest('.video-controls-overlay');
         if (videoControls) {
             isSwiping = false;
-            return;
         }
     });
 
@@ -1449,7 +1248,7 @@ function initializeCarouselTouchEvents(carousel) {
             }
         } else if (isTap) {
             // It's a tap - handle video/image interaction
-            handleCarouselTap(e, carousel);
+            // Removed handleCarouselTap call as the function was deleted
         }
 
         // Hide arrows after delay
@@ -1886,7 +1685,7 @@ async function sendComment(postId) {
             const commentsSpan = postCard.querySelector('.post-stats span:nth-child(2)');
             if (commentsSpan) {
                 const currentCount = parseInt(commentsSpan.textContent.match(/\d+/)[0]);
-                commentsSpan.textContent = `<i class='bx bx-comment'></i> ${currentCount + 1} Comments`;
+                commentsSpan.textContent = `${currentCount + 1} Comments`;
             }
 
             // Update profile stats if on profile page
@@ -2035,11 +1834,6 @@ function getFileNameFromUrl(url) {
     return filename.replace(/^\d+_/, '');
 }
 
-// Function to open document in new tab
-function openDocument(url) {
-    window.open(url, '_blank');
-}
-
 function renderProfileContent(tabName, data) {
     const contentId = tabName === 'posts' ? 'postsContent' :
         tabName === 'saved' ? 'savedContent' : 'likedContent';
@@ -2101,8 +1895,8 @@ function renderPostsToContainer(container, posts) {
             </div>
 
             <div class="post-stats">
-                <span><i class='bx bx-like'></i> ${post.likesCount || 0} Likes</span>
-                <span><i class='bx bx-comment'></i> ${post.commentsCount || 0} Comments</span>
+                <span>{post.likesCount || 0} Likes</span>
+                <span>${post.commentsCount || 0} Comments</span>
             </div>
 
             <div class="post-actions">
@@ -2174,7 +1968,13 @@ function togglePostMenu(event, postId, postUserId) {
     const menuIcon = event.currentTarget;
     const postCard = menuIcon.closest('.post-card');
     const postHeader = postCard.querySelector('.post-header');
+    console.log('Menu icon:', menuIcon);
+    console.log('Found post card:', postCard);
 
+    if (!postCard) {
+        console.error('Could not find post card from menu icon');
+        return;
+    }
     postHeader.style.position = 'relative';
     dropdown.style.position = 'absolute';
     dropdown.style.right = '0';
@@ -2195,21 +1995,85 @@ function closePostMenus() {
 }
 
 // Edit Post Function
+// Edit Post Function - Fixed version
+// Edit Post Function - Fixed version
 async function editPost(event, postId) {
     event.stopPropagation();
     closePostMenus();
 
     try {
-        // Fetch the current post data
-        const response = await fetch(`${API_BASE_URL}/posts/${postId}`);
-        const postData = await response.json();
+        // More robust way to find the post card
+        let postCard;
 
-        if (response.ok) {
-            // Show edit form/modal
-            showEditPostForm(postData);
-        } else {
-            showTemporaryModal('Failed to load post for editing');
+        // Try multiple ways to find the post card
+        if (event.target.closest) {
+            postCard = event.target.closest('.post-card');
         }
+
+        // If not found, try to find by data attribute
+        if (!postCard) {
+            postCard = document.querySelector(`[data-post-id="${postId}"]`);
+        }
+
+        // If still not found, try to find the closest article
+        if (!postCard) {
+            postCard = event.target.closest('article');
+        }
+
+        if (!postCard) {
+            console.error('Post card not found for ID:', postId);
+            showTemporaryModal('Could not find post data');
+            return;
+        }
+
+        // Get title and content from the displayed post
+        const titleElement = postCard.querySelector('.post-title');
+        const contentElement = postCard.querySelector('.post-text');
+
+        if (!titleElement || !contentElement) {
+            showTemporaryModal('Could not load post content');
+            return;
+        }
+
+        const title = titleElement.textContent || '';
+        const content = contentElement.textContent || '';
+
+        // Get file information if available
+        let imageUrl = null;
+        let documentUrl = null;
+        let videoUrl = null;
+
+        // Check for images
+        const imageElement = postCard.querySelector('.post-file-image');
+        if (imageElement) {
+            imageUrl = imageElement.src;
+        }
+
+        // Check for documents
+        const documentElement = postCard.querySelector('.post-file-document');
+        if (documentElement) {
+            documentUrl = 'document-attached';
+        }
+
+        // Check for videos
+        const videoElement = postCard.querySelector('.post-file-video');
+        if (videoElement) {
+            videoUrl = videoElement.src;
+        }
+
+        const postData = {
+            id: postId,
+            title: title,
+            content: content,
+            imageUrl: imageUrl,
+            documentUrl: documentUrl,
+            videoUrl: videoUrl
+        };
+
+        console.log('Editing post data:', postData);
+        // Show edit form/modal
+        showEditPostForm(postData);
+
     } catch (error) {
         console.error('Error loading post for editing:', error);
         showTemporaryModal('Error loading post for editing');
@@ -2323,7 +2187,6 @@ async function submitEditPost(postId) {
         showTemporaryModal('Error updating post');
     }
 }
-
 // Delete Post Function
 async function deletePost(event, postId) {
     event.stopPropagation();
@@ -2684,7 +2547,6 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     initResponsiveSidebars();
-    initializeDownloadButtons();
 
     loadPosts().catch(error => {
         console.error('Failed to load posts:', error);
@@ -2698,7 +2560,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (submitBtn) {
         submitBtn.addEventListener('click', submitPost);
     }
-
+// Add listener for scroll events on preview carousel
+    document.addEventListener('scroll', (e) => {
+        if (e.target.classList && e.target.classList.contains('file-previews-scroll')) {
+            updatePreviewCarouselControls();
+        }
+    }, true);
     window.addEventListener('online', () => {
         showTemporaryModal('Connection restored');
         loadPosts().catch(error => {
@@ -2716,6 +2583,295 @@ window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(initResponsiveSidebars, 120);
 });
+// ============================================
+// ENHANCED DOWNLOAD PERMISSION SYSTEM
+// ============================================
+
+// Enhanced download function that always shows permission modal
+function requestDownloadPermission(fileUrl, filename) {
+    // Create download permission modal
+    const modal = document.createElement('div');
+    modal.className = 'download-permission-modal active';
+    modal.innerHTML = `
+        <div class="download-permission-content">
+            <div class="download-permission-title">
+                <i class='bx bx-download'></i>
+                Download File
+            </div>
+            <div class="download-permission-message">
+                Are you sure you want to download this file?
+            </div>
+            <div class="download-permission-filename">
+                <i class='bx bx-file'></i>
+                ${filename}
+            </div>
+            <div class="download-permission-buttons">
+                <button class="download-permission-btn download-permission-cancel" onclick="closeDownloadPermission()">
+                    Cancel
+                </button>
+                <button class="download-permission-btn download-permission-confirm" onclick="confirmDownload('${fileUrl}', '${filename}')">
+                    <i class='bx bx-download'></i>
+                    Download
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeDownloadPermission();
+        }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', handleDownloadPermissionKeydown);
+}
+
+// Enhanced file item rendering with proper download handlers
+function renderFileItem(file) {
+    const fullUrl = `${API_BASE_URL}${file.url}`;
+    const filename = getFileNameFromUrl(file.url);
+
+    switch (file.type) {
+        case 'image':
+            return `
+                <div class="media-container" onclick="maximizeImage('${fullUrl}', '${filename}')">
+                    <img src="${fullUrl}" alt="${filename}" class="post-file-image" loading="lazy">
+                  
+                </div>
+            `;
+
+        case 'video':
+            return `
+                <div class="media-container">
+                    <video class="post-file-video" preload="metadata" 
+                           onclick="handleVideoClick(event, this, '${fullUrl}', '${filename}')">
+                        <source src="${fullUrl}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="video-controls-overlay" onclick="handleVideoControlsClick(event, '${fullUrl}', '${filename}')">
+                        <button class="video-play-btn">
+                            <i class='bx bx-play'></i>
+                        </button>
+                    </div>
+                   
+                </div>
+            `;
+
+        case 'document':
+            return `
+        <div class="post-file-document" onclick="openDocumentPreview('${fullUrl}', '${filename}')">
+            <i class='bx bx-file'></i>
+            <div class="document-info">
+                <div class="document-name">${filename}</div>
+                <div class="document-type">Document</div>
+            </div>
+            <button class="download-btn" onclick="requestDownloadPermission('${fullUrl}', '${filename}')">
+                <i class='bx bx-download'></i>
+            </button>
+        </div>
+    `;
+
+        default:
+            return '';
+    }
+}
+
+// Enhanced maximize controls with download buttons
+function maximizeImage(imageUrl, filename) {
+    const modal = document.createElement('div');
+    modal.className = 'image-maximize-modal active';
+    modal.innerHTML = `
+    <div class="maximized-image-container">
+        <img src="${imageUrl}" class="maximized-image" onclick="event.stopPropagation()">
+        <div class="maximize-controls">
+            <div class="maximize-controls-right">
+                <button class="maximize-btn" onclick="requestDownloadPermission('${imageUrl}', '${filename}')">
+                    <i class='bx bx-download'></i>
+                </button>
+                <button class="maximize-btn" onclick="closeMaximizedImage()">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+        </div>
+    </div>
+`;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeMaximizedImage();
+        }
+    });
+
+    document.addEventListener('keydown', handleMaximizeKeydown);
+}
+// Enhanced video maximize with download button
+function maximizeVideo(videoUrl) {
+    // Pause any currently playing video
+    if (currentPlayingVideo) {
+        currentPlayingVideo.pause();
+        const container = currentPlayingVideo.closest('.media-container');
+        if (container) {
+            container.classList.remove('video-playing');
+            const playBtn = container.querySelector('.video-play-btn i');
+            if (playBtn) {
+                playBtn.className = 'bx bx-play';
+            }
+        }
+        currentPlayingVideo = null;
+    }
+
+    // Create video maximize modal
+    const modal = document.createElement('div');
+    modal.className = 'video-maximize-modal active';
+    modal.innerHTML = `
+        <div class="maximized-video-container">
+            <video class="maximized-video" controls autoplay>
+                <source src="${videoUrl}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+           
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const video = modal.querySelector('.maximized-video');
+    currentMaximizedVideo = video;
+
+    // Set up video event listeners
+    video.addEventListener('play', () => {
+        updateMaximizedVideoControls(true);
+    });
+
+    video.addEventListener('pause', () => {
+        updateMaximizedVideoControls(false);
+    });
+
+    video.addEventListener('loadeddata', () => {
+        modal.classList.remove('video-loading');
+    });
+
+    video.addEventListener('waiting', () => {
+        modal.classList.add('video-loading');
+    });
+
+    video.addEventListener('canplay', () => {
+        modal.classList.remove('video-loading');
+    });
+
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeMaximizedVideo();
+        }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', handleVideoMaximizeKeydown);
+
+    // Auto-play the video
+    video.play().catch(error => {
+        console.error('Error auto-playing maximized video:', error);
+    });
+}
+
+// New function for document preview instead of direct download
+function openDocumentPreview(documentUrl, filename) {
+    const modal = document.createElement('div');
+    modal.className = 'document-preview-modal active';
+    modal.innerHTML = `
+        <div class="document-preview-container">
+            <div class="document-preview-header">
+                <div class="document-preview-icon">
+                    <i class='bx bx-file'></i>
+                </div>
+                <div class="document-preview-info">
+                    <div class="document-preview-name">${filename}</div>
+                    <div class="document-preview-type">Document File</div>
+                </div>
+            </div>
+            <div class="document-preview-message">
+                <i class='bx bx-info-circle'></i>
+                This document cannot be previewed in the app.
+            </div>
+            <div class="document-preview-actions">
+                <button class="document-preview-btn secondary" onclick="closeDocumentPreview()">
+                    <i class='bx bx-x'></i>
+                    Cancel
+                </button>
+                <button class="document-preview-btn primary" onclick="requestDownloadPermission('${documentUrl}', '${filename}')">
+                    <i class='bx bx-download'></i>
+                    Download File
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeDocumentPreview();
+        }
+    });
+
+    document.addEventListener('keydown', handleDocumentPreviewKeydown);
+}
+
+function closeDocumentPreview() {
+    const modal = document.querySelector('.document-preview-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+    document.removeEventListener('keydown', handleDocumentPreviewKeydown);
+}
+
+function handleDocumentPreviewKeydown(e) {
+    if (e.key === 'Escape') {
+        closeDocumentPreview();
+    }
+}
+
+// Enhanced download execution
+function confirmDownload(fileUrl, filename) {
+    closeDownloadPermission();
+
+    // Add a small delay to allow modal to close
+    setTimeout(() => {
+        executeDownload(fileUrl, filename);
+    }, 100);
+}
+
+function executeDownload(url, filename) {
+    showTemporaryModal('Preparing download...');
+
+    // Create a temporary anchor element for download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    link.target = '_blank'; // Open in new tab for better UX
+
+    document.body.appendChild(link);
+
+    // Trigger download
+    link.click();
+
+    // Clean up
+    setTimeout(() => {
+        document.body.removeChild(link);
+        showTemporaryModal('Download started!');
+    }, 1000);
+}
 
 // ============================================
 // EXPORT FUNCTIONS FOR HTML
@@ -2753,3 +2909,5 @@ window.closeEditModal = closeEditModal;
 window.submitEditPost = submitEditPost;
 window.scrollPostCarousel = scrollPostCarousel;
 window.goToSlide = goToSlide;
+window.scrollPreviewCarousel = scrollPreviewCarousel;
+window.updatePreviewCarouselControls = updatePreviewCarouselControls;
