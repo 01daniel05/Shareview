@@ -2878,7 +2878,16 @@ function maximizeVideo(videoUrl) {
                 <source src="${videoUrl}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
-           
+           <div class="maximize-controls">
+            <div class="maximize-controls-right">
+                <button class="maximize-btn" onclick="requestDownloadPermission('${imageUrl}', '${filename}')">
+                    <i class='bx bx-download'></i>
+                </button>
+                <button class="maximize-btn" onclick="closeMaximizedImage()">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+        </div>
         </div>
     `;
 
