@@ -6,12 +6,18 @@ import Shareview.repository.OTPRepository;
 import Shareview.repository.UserRepository;
 import Shareview.service.AuthService;
 import Shareview.service.EmailService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,64 +31,97 @@ public class AuthController {
     private final EmailService emailService;
     private final AuthService authService;
 
-    public AuthController(OTPRepository otpRepository, UserRepository userRepository, EmailService emailService, AuthService authService) {
+    @Value("${spring.mail.from:shareview682@gmail.com}")
+    private String fromEmail;
+
+    @Autowired
+    public AuthController(OTPRepository otpRepository, UserRepository userRepository,
+                          EmailService emailService, AuthService authService, JavaMailSender mailSender) {
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
         this.authService = authService;
     }
 
-
-
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> registerUser(@RequestBody User user) {
+    public ResponseEntity<Map<String, String>> registerUser(@Valid @RequestBody User user) {
         try {
-            // DEBUG: Check the incoming data
-            System.out.println("=== REGISTRATION DEBUG ===");
-            System.out.println("First Name: " + user.getFirstName());
-            System.out.println("Last Name: " + user.getLastName());
-            System.out.println("Email: " + user.getEmail());
-            System.out.println("Birthday: " + user.getBDate());
-            System.out.println("Gender: " + user.getGender());
-            System.out.println("Password present: " + (user.getPassword() != null));
-            System.out.println("=========================");
-
-            Optional<User> existingUser = userRepository.findByEmail(user.getEmail());
-            if (existingUser.isPresent()) {
+            // Check if user already exists
+            if (userRepository.findByEmail(user.getEmail()).isPresent()) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body(Map.of("status", "error", "message", "This Email is already registered!"));
             }
 
+            // Validate password
+            if (user.getPassword() == null || user.getPassword().length() < 6) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("status", "error", "message", "Password must be at least 6 characters"));
+            }
+
+            // Encode password and save user
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             User savedUser = userRepository.save(user);
 
-            System.out.println("Saved user birthday: " + savedUser.getBDate());
+            // Send welcome email (optional)
+            try {
+                emailService.sendTestEmail(savedUser.getEmail());
+            } catch (Exception e) {
+                // Log but don't fail registration if email fails
+                System.err.println("Failed to send welcome email: " + e.getMessage());
+            }
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(Map.of("status", "success", "message", "User registered successfully!"));
+                    .body(Map.of("status", "success", "message", "User registered successfully!", "userId", savedUser.getId().toString()));
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("status", "error", "message", "Registration failed. Please try again later."));
         }
     }
+
     @PostMapping("/forgot-password")
     public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
 
         if (email == null || email.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("status", "error", "message", "Email is required."));
+            return ResponseEntity.badRequest()
+                    .body(Map.of("status", "error", "message", "Email is required."));
         }
 
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "Email not found."));
+            // Don't reveal if email exists or not (security best practice)
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "If your email is registered, you will receive an OTP shortly."
+            ));
         }
 
+        // Send OTP
         emailService.sendOTP(email);
+
         return ResponseEntity.ok(Map.of(
                 "status", "success",
                 "message", "OTP sent successfully."
+        ));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<Map<String, String>> verifyOtp(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String otp = body.get("otp");
+
+        if (email == null || otp == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("status", "error", "message", "Email and OTP are required"));
+        }
+
+        OTPVerificationResult result = emailService.verifyOTP(email, otp);
+
+        return ResponseEntity.ok(Map.of(
+                "message", result.message(),
+                "status", result.success() ? "success" : "fail"
         ));
     }
 
@@ -91,20 +130,34 @@ public class AuthController {
         String email = req.get("email");
         String newPassword = req.get("newPassword");
 
-        Optional<User> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("status", "error", "message", "User not found."));
+        if (email == null || newPassword == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("status", "error", "message", "Email and new password are required"));
         }
 
-        // Delete any existing OTP or reset token before updating password
-        otpRepository.deleteByEmail(email);
+        if (newPassword.length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("status", "error", "message", "Password must be at least 6 characters"));
+        }
 
-        // Update the password
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("status", "error", "message", "User not found."));
+        }
+
+        // Update password
         User user = userOpt.get();
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        return ResponseEntity.ok(Map.of("status", "success", "message", "Password updated."));
+        // Clean up any remaining OTPs
+        otpRepository.deleteByEmail(email);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Password updated successfully."
+        ));
     }
 
     @PostMapping("/signIn")
@@ -117,16 +170,7 @@ public class AuthController {
                     .body(Map.of("message", "Email and password are required!", "status", "error"));
         }
 
-        // Find the user by email once
         return authService.authenticateUser(email, password);
-
-    }
-
-    @PostMapping("/create-account")
-    @ResponseBody // Responds with plain text
-    public String createAccount() {
-        System.out.println("Account created!");
-        return "Account successfully created!";
     }
 
     @PostMapping("/send-otp")
@@ -137,29 +181,85 @@ public class AuthController {
                 return ResponseEntity.badRequest()
                         .body(Map.of("message", "Email is required", "status", "error"));
             }
-            System.out.println("Sending OTP to email: " + email);
-            emailService.sendOTP(email);
-            System.out.println("Sending OTP to email: " + email);
 
-            return ResponseEntity.ok(Map.of("message", "OTP sent!", "status", "success"));
+            System.out.println("=== SEND OTP ENDPOINT CALLED ===");
+            System.out.println("Email: " + email);
+            System.out.println("Timestamp: " + LocalDateTime.now());
+
+            emailService.sendOTP(email);
+
+            System.out.println("✅ OTP process completed for: " + email);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "OTP sent successfully!",
+                    "status", "success"
+            ));
+
         } catch (Exception e) {
+            System.out.println("❌ ERROR in sendOTP: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Failed to send OTP: " + e.getMessage(), "status", "error"));
+                    .body(Map.of("message", "Failed to send OTP", "status", "error"));
         }
     }
 
-    @PostMapping("/verify-otp")
-    public ResponseEntity<Map<String, String>> verifyOtp(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
-        String otp = body.get("otp");
+    @GetMapping("/test-email-config")
+    public ResponseEntity<Map<String, Object>> testEmailConfig() {
+        Map<String, Object> response = new HashMap<>();
 
-        OTPVerificationResult result = emailService.verifyOTP(email, otp);
+        try {
+            // Environment info
+            response.put("SENDGRID_API_KEY_SET",
+                    System.getenv("SENDGRID_API_KEY") != null ? "YES (length: " +
+                            System.getenv("SENDGRID_API_KEY").length() + ")" : "NO");
 
-        return ResponseEntity.ok(Map.of(
-                "message", result.message(),
-                "status", result.success() ? "success" : "fail"
-        ));
+            response.put("FROM_EMAIL", fromEmail);
+            response.put("CURRENT_TIME", LocalDateTime.now().toString());
+
+            // Test email sending
+            boolean testResult = emailService.sendTestEmail(fromEmail);
+            response.put("TEST_EMAIL_SENT", testResult ? "SUCCESS" : "FAILED");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            response.put("error", e.getMessage());
+            response.put("stacktrace", e.getStackTrace());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PostMapping("/send-test-email")
+    public ResponseEntity<Map<String, String>> sendTestEmail(@RequestBody(required = false) Map<String, String> body) {
+        try {
+            String testEmail = body != null ? body.get("email") : fromEmail;
+            if (testEmail == null) {
+                testEmail = fromEmail;
+            }
+
+            boolean success = emailService.sendTestEmail(testEmail);
+
+            if (success) {
+                return ResponseEntity.ok(Map.of(
+                        "status", "success",
+                        "message", "Test email sent to " + testEmail,
+                        "timestamp", LocalDateTime.now().toString()
+                ));
+            } else {
+                return ResponseEntity.status(500).body(Map.of(
+                        "status", "error",
+                        "message", "Failed to send test email to " + testEmail
+                ));
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ Failed to send test email: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                    "status", "error",
+                    "message", "Failed to send test email: " + e.getMessage(),
+                    "error", e.getClass().getSimpleName()
+            ));
+        }
     }
 }
-

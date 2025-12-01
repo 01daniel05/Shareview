@@ -1,11 +1,4 @@
-// ============================================
-// LOGIN.JS - UI Integration Only
-// ============================================
 
-// Better approach - works in both development and production
-//const API_BASE_URL = 'https://shareview-production.up.railway.app';  // For production
-// login.js - Improved version with better debugging
-// Auto-detect environment
 let API_BASE_URL;
 
 if (window.location.hostname === 'localhost' ||

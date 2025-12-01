@@ -18,9 +18,8 @@ public interface OTPRepository extends JpaRepository<OTP, Long> {
     @Query("DELETE FROM OTP o WHERE o.email = ?1")
     void deleteByEmail(String email);
 
-    // Custom method to delete expired OTPs with explicit transaction
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM OTP o WHERE o.expiresAt < ?1")
-    void deleteAllByExpiresAtBefore(LocalDateTime now);
+
+    // OPTION 3: Keep void method but handle differently
+    int deleteAllByExpiresAtBefore(LocalDateTime now);
+
 }

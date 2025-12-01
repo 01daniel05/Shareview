@@ -17,7 +17,6 @@ public class WebConfig {
                         .allowedOrigins(
                                 "http://localhost",
                                 "http://127.0.0.1",
-                                "http://localhost:3000",  // Add your frontend port
                                 "http://localhost:8080",
                                 "https://shareview-production.up.railway.app",
                                 "https://shareview-vovf.onrender.com"
