@@ -3,15 +3,11 @@ package Shareview.service;
 import Shareview.dto.OTPVerificationResult;
 import Shareview.model.OTP;
 import Shareview.repository.OTPRepository;
-import com.sendgrid.*;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -20,13 +16,12 @@ import java.util.logging.Logger;
 @Service
 public class EmailService {
 
+    private final JavaMailSender mailSender;
     private final OTPRepository otpRepository;
 
-    @Value("${sendgrid.api.key}")
-    private String sendGridApiKey;
-
     @Autowired
-    public EmailService(OTPRepository otpRepository) {
+    public EmailService(JavaMailSender mailSender, OTPRepository otpRepository) {
+        this.mailSender = mailSender;
         this.otpRepository = otpRepository;
     }
 
@@ -35,82 +30,30 @@ public class EmailService {
 
     public void sendOTP(String email) {
         try {
-            // 1. Generate and save OTP
             String otp = generateOTP();
             LOGGER.info("Generated OTP: " + otp);
 
-            // Delete any existing OTP for this email
-            otpRepository.deleteByEmail(email);
-            deleteExpiredOTPs();
+            Optional<OTP> existingOtp = otpRepository.findByEmail(email);
+            existingOtp.ifPresent(otpRepository::delete);
 
-            // Save new OTP to database
+            if (!otpRepository.findAll().isEmpty()) {
+                deleteExpiredOTPs();
+            }
+
             OTP otpEntity = new OTP();
             otpEntity.setEmail(email);
             otpEntity.setOtpCode(otp);
             otpEntity.setExpiresAt(LocalDateTime.now().plusMinutes(2));
             otpRepository.save(otpEntity);
-            LOGGER.info("OTP saved to database for: " + email);
 
-            // 2. Send email via SendGrid
-            sendEmailViaSendGrid(email, otp);
-
+            sendEmail(email, otp);
         } catch (Exception e) {
-            LOGGER.severe("Failed to send OTP: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.severe("Failed to send OTP email: " + e.getMessage());
             throw new RuntimeException("Error sending OTP. Please try again.");
         }
     }
 
-    private void sendEmailViaSendGrid(String toEmail, String otp) {
-        try {
-            LOGGER.info("Preparing to send email via SendGrid to: " + toEmail);
-
-            // Check if API key is configured
-            if (sendGridApiKey == null || sendGridApiKey.isEmpty()) {
-                LOGGER.severe("SendGrid API key is not configured!");
-                throw new RuntimeException("SendGrid API key is not configured");
-            }
-
-            // Create email
-            Email from = new Email("noreply@shareview.com", "ShareView");
-            Email to = new Email(toEmail);
-            String subject = "Your OTP Code - ShareView";
-            Content content = new Content("text/plain",
-                    "Your OTP Code is: " + otp + "\n\n" +
-                            "It expires in 2 minutes.\n\n" +
-                            "Do not share this code with anyone.\n\n" +
-                            "- ShareView Team");
-
-            Mail mail = new Mail(from, subject, to, content);
-
-            // Configure SendGrid
-            SendGrid sg = new SendGrid(sendGridApiKey);
-            Request request = new Request();
-            request.setMethod(Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-
-            // Send email
-            LOGGER.info("Sending email via SendGrid...");
-            Response response = sg.api(request);
-
-            LOGGER.info("SendGrid response status: " + response.getStatusCode());
-            LOGGER.info("SendGrid response body: " + response.getBody());
-
-            if (response.getStatusCode() >= 200 && response.getStatusCode() < 300) {
-                LOGGER.info("✅ Email sent successfully via SendGrid to: " + toEmail);
-            } else {
-                LOGGER.severe("❌ SendGrid returned error: " + response.getStatusCode());
-                throw new RuntimeException("SendGrid failed with status: " + response.getStatusCode());
-            }
-
-        } catch (IOException ex) {
-            LOGGER.severe("❌ Error sending email via SendGrid: " + ex.getMessage());
-            ex.printStackTrace();
-            throw new RuntimeException("Failed to send email via SendGrid: " + ex.getMessage());
-        }
-    }
-
+    // Method to verify OTP
     public OTPVerificationResult verifyOTP(String email, String otp) {
         try {
             Optional<OTP> storedOtp = otpRepository.findByEmail(email);
@@ -134,7 +77,7 @@ public class EmailService {
 
             if (otpRecord.getOtpCode().equals(otp)) {
                 otpRepository.delete(otpRecord);
-                LOGGER.info("✅ OTP verified successfully for email: " + email);
+                LOGGER.info("OTP verified successfully for email: " + email);
                 return new OTPVerificationResult(true, "OTP verified successfully.");
             } else {
                 LOGGER.warning("Invalid OTP entered for email: " + email);
@@ -146,10 +89,38 @@ public class EmailService {
         }
     }
 
+    // Helper method to generate a secure 6-digit OTP
     private String generateOTP() {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
 
+    private void sendEmail(String email, String otp) {
+        try {
+            LOGGER.info("Attempting to send email to: " + email);
+
+            // Add debugging for mail configuration (fixed)
+            if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl senderImpl) {
+                LOGGER.info("Mail host: " + senderImpl.getHost());
+                LOGGER.info("Mail port: " + senderImpl.getPort());
+                LOGGER.info("Mail username: " + senderImpl.getUsername());
+            }
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Your OTP Code - ShareView");
+            message.setText("Your OTP Code is: " + otp + "\nIt expires in 2 minutes.\n\nDo not share this code with anyone.");
+
+            LOGGER.info("Email message prepared, sending...");
+            mailSender.send(message);
+            LOGGER.info("OTP email sent successfully to: " + email);
+
+        } catch (Exception e) {
+            LOGGER.severe("Failed to send OTP email: " + e.getMessage());
+            LOGGER.severe("Exception type: " + e.getClass().getName());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to send email: " + e.getMessage());
+        }
+    }
     public void deleteExpiredOTPs() {
         try {
             LocalDateTime now = LocalDateTime.now();
