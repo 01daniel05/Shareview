@@ -9,89 +9,42 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 public class PostService {
-    private final String UPLOAD_DIR = "uploads/";
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PostLikeRepository postLikeRepository;
     private final SavedPostRepository savedPostRepository;
     private final PostReportRepository postReportRepository;
+    private final CloudinaryService cloudinaryService;
 
     public PostService(PostRepository postRepository,
                        UserRepository userRepository,
                        PostLikeRepository postLikeRepository,
                        SavedPostRepository savedPostRepository,
-                       PostReportRepository postReportRepository) {
+                       PostReportRepository postReportRepository,
+                       CloudinaryService cloudinaryService) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.postLikeRepository = postLikeRepository;
         this.savedPostRepository = savedPostRepository;
         this.postReportRepository = postReportRepository;
-        createUploadDirectories();
+        this.cloudinaryService = cloudinaryService;
     }
 
     // ============================================
-    // FILE UPLOAD METHODS
+    // POST CREATION WITH CLOUDINARY
     // ============================================
 
-    private void createUploadDirectories() {
-        try {
-            Files.createDirectories(Paths.get(UPLOAD_DIR + "images"));
-            Files.createDirectories(Paths.get(UPLOAD_DIR + "documents"));
-            Files.createDirectories(Paths.get(UPLOAD_DIR + "videos"));
-            System.out.println("Upload directories created successfully");
-        } catch (IOException e) {
-            System.err.println("Could not create upload directories: " + e.getMessage());
-        }
-    }
-
-    private String saveFile(MultipartFile file, String folder) throws IOException {
-        if (file == null || file.isEmpty()) {
-            return null;
-        }
-
-        // Generate unique filename
-        String originalFilename = file.getOriginalFilename();
-        String filename = System.currentTimeMillis() + "_" +
-                (originalFilename != null ? originalFilename.replace(" ", "_") : "file");
-
-        // Create the full path
-        Path filePath = Paths.get(UPLOAD_DIR + folder + "/" + filename);
-
-        // Save the file
-        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-        System.out.println("File saved to: " + filePath.toAbsolutePath());
-
-        // Return the URL path (not the filesystem path)
-        return "/uploads/" + folder + "/" + filename;
-    }
-
-    private String getFileExtension(String filename) {
-        if (filename == null || !filename.contains(".")) {
-            return "";
-        }
-        return filename.substring(filename.lastIndexOf("."));
-    }
-
-    // ============================================
-    // POST CREATION WITH FILES
-    // ============================================
     @Transactional
     public ResponseEntity<?> createPostWithMultipleFiles(String title, String content, Long userId,
                                                          MultipartFile[] images,
                                                          MultipartFile[] documents,
                                                          MultipartFile[] videos) {
         try {
-            System.out.println("=== MULTIPLE FILE UPLOAD DEBUG ===");
+            System.out.println("=== CLOUDINARY UPLOAD DEBUG ===");
             System.out.println("Title: " + title);
             System.out.println("Content: " + content);
             System.out.println("User ID: " + userId);
@@ -125,16 +78,19 @@ public class PostService {
             List<String> allDocumentUrls = new ArrayList<>();
             List<String> allVideoUrls = new ArrayList<>();
 
-            // Handle multiple images
+            // Handle multiple images - Upload to Cloudinary
             if (images != null && images.length > 0) {
                 for (MultipartFile image : images) {
                     if (image != null && !image.isEmpty()) {
                         try {
-                            String imageUrl = saveFile(image, "images");
-                            allImageUrls.add(imageUrl);
-                            System.out.println("✅ Image uploaded: " + imageUrl);
-                        } catch (Exception e) {
+                            String imageUrl = cloudinaryService.uploadFile(image, "images");
+                            if (imageUrl != null) {
+                                allImageUrls.add(imageUrl);
+                                System.out.println("✅ Image uploaded to Cloudinary: " + imageUrl);
+                            }
+                        } catch (IOException e) {
                             System.err.println("❌ Failed to upload image: " + e.getMessage());
+                            // Continue with other files instead of failing completely
                         }
                     }
                 }
@@ -143,15 +99,17 @@ public class PostService {
                 }
             }
 
-            // Handle multiple documents
+            // Handle multiple documents - Upload to Cloudinary
             if (documents != null && documents.length > 0) {
                 for (MultipartFile document : documents) {
                     if (document != null && !document.isEmpty()) {
                         try {
-                            String documentUrl = saveFile(document, "documents");
-                            allDocumentUrls.add(documentUrl);
-                            System.out.println("✅ Document uploaded: " + documentUrl);
-                        } catch (Exception e) {
+                            String documentUrl = cloudinaryService.uploadFile(document, "documents");
+                            if (documentUrl != null) {
+                                allDocumentUrls.add(documentUrl);
+                                System.out.println("✅ Document uploaded to Cloudinary: " + documentUrl);
+                            }
+                        } catch (IOException e) {
                             System.err.println("❌ Failed to upload document: " + e.getMessage());
                         }
                     }
@@ -161,15 +119,17 @@ public class PostService {
                 }
             }
 
-            // Handle multiple videos
+            // Handle multiple videos - Upload to Cloudinary
             if (videos != null && videos.length > 0) {
                 for (MultipartFile video : videos) {
                     if (video != null && !video.isEmpty()) {
                         try {
-                            String videoUrl = saveFile(video, "videos");
-                            allVideoUrls.add(videoUrl);
-                            System.out.println("✅ Video uploaded: " + videoUrl);
-                        } catch (Exception e) {
+                            String videoUrl = cloudinaryService.uploadFile(video, "videos");
+                            if (videoUrl != null) {
+                                allVideoUrls.add(videoUrl);
+                                System.out.println("✅ Video uploaded to Cloudinary: " + videoUrl);
+                            }
+                        } catch (IOException e) {
                             System.err.println("❌ Failed to upload video: " + e.getMessage());
                         }
                     }
@@ -202,8 +162,108 @@ public class PostService {
                     .body(Map.of("status", "error", "message", "Failed to create post: " + e.getMessage()));
         }
     }
+
     // ============================================
-    // EXISTING METHODS (keep all your current methods)
+    // DELETE POST WITH CLOUDINARY CLEANUP
+    // ============================================
+
+    @Transactional
+    public ResponseEntity<?> deletePost(Long postId, Long userId) {
+        try {
+            Optional<Post> postOptional = postRepository.findById(postId);
+            Optional<User> userOptional = userRepository.findById(userId);
+
+            if (postOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("status", "error", "message", "Post not found"));
+            }
+
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("status", "error", "message", "User not found"));
+            }
+
+            Post post = postOptional.get();
+
+            // Check if the user owns the post
+            if (!post.getUser().getId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("status", "error", "message", "You can only delete your own posts"));
+            }
+
+            // Delete files from Cloudinary
+            deletePostFilesFromCloudinary(post);
+
+            // Delete all related records
+            postLikeRepository.deleteByPostId(postId);
+            savedPostRepository.deleteByPostId(postId);
+
+            // Finally delete the post
+            postRepository.delete(post);
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "Post deleted successfully"
+            ));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "error", "message", "Failed to delete post: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete all files associated with a post from Cloudinary
+     */
+    private void deletePostFilesFromCloudinary(Post post) {
+        // Delete images
+        if (post.hasImages()) {
+            for (String imageUrl : post.getImageUrlList()) {
+                try {
+                    String publicId = cloudinaryService.extractPublicId(imageUrl);
+                    if (publicId != null) {
+                        cloudinaryService.deleteFile(publicId, "image");
+                        System.out.println("🗑️ Deleted image from Cloudinary: " + publicId);
+                    }
+                } catch (IOException e) {
+                    System.err.println("Failed to delete image: " + e.getMessage());
+                }
+            }
+        }
+
+        // Delete documents
+        if (post.hasDocuments()) {
+            for (String documentUrl : post.getDocumentUrlList()) {
+                try {
+                    String publicId = cloudinaryService.extractPublicId(documentUrl);
+                    if (publicId != null) {
+                        cloudinaryService.deleteFile(publicId, "raw");
+                        System.out.println("🗑️ Deleted document from Cloudinary: " + publicId);
+                    }
+                } catch (IOException e) {
+                    System.err.println("Failed to delete document: " + e.getMessage());
+                }
+            }
+        }
+
+        // Delete videos
+        if (post.hasVideos()) {
+            for (String videoUrl : post.getVideoUrlList()) {
+                try {
+                    String publicId = cloudinaryService.extractPublicId(videoUrl);
+                    if (publicId != null) {
+                        cloudinaryService.deleteFile(publicId, "video");
+                        System.out.println("🗑️ Deleted video from Cloudinary: " + publicId);
+                    }
+                } catch (IOException e) {
+                    System.err.println("Failed to delete video: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    // ============================================
+    // KEEP ALL OTHER EXISTING METHODS UNCHANGED
     // ============================================
 
     @Transactional
@@ -244,7 +304,6 @@ public class PostService {
     public ResponseEntity<?> getAllPosts() {
         try {
             List<Post> posts = postRepository.findAllWithUserOrderByCreatedAtDesc();
-            System.out.println("Loaded " + posts.size() + " posts");
             return ResponseEntity.ok(posts);
         } catch (Exception e) {
             e.printStackTrace();
@@ -270,15 +329,12 @@ public class PostService {
             }
 
             Post post = postOptional.get();
-            User user = userOptional.get();
 
-            // Check if the user owns the post
             if (!post.getUser().getId().equals(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("status", "error", "message", "You can only edit your own posts"));
             }
 
-            // Validate input
             if (title == null || title.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("status", "error", "message", "Title cannot be empty"));
@@ -289,7 +345,6 @@ public class PostService {
                         .body(Map.of("status", "error", "message", "Content cannot be empty"));
             }
 
-            // Update post
             post.setTitle(title.trim());
             post.setContent(content.trim());
 
@@ -308,53 +363,6 @@ public class PostService {
     }
 
     @Transactional
-    public ResponseEntity<?> deletePost(Long postId, Long userId) {
-        try {
-            Optional<Post> postOptional = postRepository.findById(postId);
-            Optional<User> userOptional = userRepository.findById(userId);
-
-            if (postOptional.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("status", "error", "message", "Post not found"));
-            }
-
-            if (userOptional.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("status", "error", "message", "User not found"));
-            }
-
-            Post post = postOptional.get();
-
-            // Check if the user owns the post
-            if (!post.getUser().getId().equals(userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Map.of("status", "error", "message", "You can only delete your own posts"));
-            }
-
-            // Delete all likes for this post
-            postLikeRepository.deleteByPostId(postId);
-
-            // Delete all saves for this post
-            savedPostRepository.deleteByPostId(postId);
-
-            // Delete all reports for this post (if you have reports)
-            // postReportRepository.deleteByPostId(postId);
-
-            // Finally delete the post
-            postRepository.delete(post);
-
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "message", "Post deleted successfully"
-            ));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("status", "error", "message", "Failed to delete post: " + e.getMessage()));
-        }
-    }
-
-    @Transactional
     public ResponseEntity<?> reportPost(Long postId, Long userId, String reason) {
         try {
             Optional<Post> postOptional = postRepository.findById(postId);
@@ -368,7 +376,6 @@ public class PostService {
             Post post = postOptional.get();
             User user = userOptional.get();
 
-            // Check if user already reported this post
             Optional<PostReport> existingReport = postReportRepository.findByUser_IdAndPost_Id(userId, postId);
 
             if (existingReport.isPresent()) {
@@ -376,7 +383,6 @@ public class PostService {
                         .body(Map.of("status", "error", "message", "You have already reported this post"));
             }
 
-            // Create new report
             PostReport report = new PostReport();
             report.setPost(post);
             report.setUser(user);
