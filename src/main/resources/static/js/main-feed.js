@@ -1034,44 +1034,62 @@ function renderFilesCarousel(post) {
 let currentPlayingVideo = null;
 let currentMaximizedVideo = null;
 
-// Handle video click (play/pause or maximize)
-function handleVideoClick(event, videoElement, videoUrl, filename) {
+// ============================================
+// FIXED VIDEO PLAYBACK SYSTEM
+// ============================================
+
+// Replace the problematic handleVideoClick function with this simpler version:
+function handleVideoClick(event, videoElement) {
     event.stopPropagation();
 
-    // Check if it's a double click or long press for maximize
-    if (event.detail === 2 || event.type === 'longpress') {
-        maximizeVideo(videoUrl, filename);
-        return;
+    // Stop currently playing video
+    if (currentPlayingVideo && currentPlayingVideo !== videoElement) {
+        currentPlayingVideo.pause();
+        const otherContainer = currentPlayingVideo.closest('.media-container');
+        if (otherContainer) {
+            otherContainer.classList.remove('video-playing');
+            const otherPlayBtn = otherContainer.querySelector('.video-play-btn i');
+            if (otherPlayBtn) {
+                otherPlayBtn.className = 'bx bx-play';
+            }
+        }
     }
 
-    // Single click - play/pause
-    const container = videoElement.closest('.media-container');
-    toggleVideoPlay(container, videoUrl);
+    // Toggle play/pause
+    if (videoElement.paused) {
+        videoElement.play().then(() => {
+            const container = videoElement.closest('.media-container');
+            if (container) {
+                container.classList.add('video-playing');
+                const playBtn = container.querySelector('.video-play-btn i');
+                if (playBtn) {
+                    playBtn.className = 'bx bx-pause';
+                }
+            }
+            currentPlayingVideo = videoElement;
+        }).catch(error => {
+            console.error('Error playing video:', error);
+            showTemporaryModal('Error playing video');
+        });
+    } else {
+        videoElement.pause();
+        const container = videoElement.closest('.media-container');
+        if (container) {
+            container.classList.remove('video-playing');
+            const playBtn = container.querySelector('.video-play-btn i');
+            if (playBtn) {
+                playBtn.className = 'bx bx-play';
+            }
+        }
+        currentPlayingVideo = null;
+    }
 }
 
-// Handle video controls overlay click
+// Replace the handleVideoControlsClick function:
 function handleVideoControlsClick(event, videoUrl, filename) {
     event.stopPropagation();
     maximizeVideo(videoUrl, filename);
 }
-
-
-function closeMaximizedVideo() {
-    if (currentMaximizedVideo) {
-        currentMaximizedVideo.pause();
-        currentMaximizedVideo = null;
-    }
-
-    const modal = document.querySelector('.video-maximize-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
-    }
-    document.removeEventListener('keydown', handleVideoMaximizeKeydown);
-}
-
 function handleVideoMaximizeKeydown(e) {
     if (e.key === 'Escape') {
         closeMaximizedVideo();
@@ -1081,22 +1099,9 @@ function handleVideoMaximizeKeydown(e) {
     }
 }
 
-function toggleMaximizedVideoPlay() {
-    if (!currentMaximizedVideo) return;
 
-    if (currentMaximizedVideo.paused) {
-        currentMaximizedVideo.play();
-    } else {
-        currentMaximizedVideo.pause();
-    }
-}
 
-function updateMaximizedVideoControls(isPlaying) {
-    const playPauseIcon = document.getElementById('maximizedPlayPause');
-    if (playPauseIcon) {
-        playPauseIcon.className = isPlaying ? 'bx bx-pause' : 'bx bx-play';
-    }
-}
+
 
 function closeMaximizedImage() {
     const modal = document.querySelector('.image-maximize-modal');
@@ -1174,6 +1179,9 @@ function handleMaximizeKeydown(e) {
 }
 
 // Enhanced carousel initialization with media detection
+// Update the initializePostCarousels function:
+// Enhanced carousel initialization with media detection
+// Update the initializePostCarousels function:
 function initializePostCarousels() {
     document.querySelectorAll('.post-files-carousel').forEach(carousel => {
         const track = carousel.querySelector('.carousel-track');
@@ -1183,11 +1191,12 @@ function initializePostCarousels() {
         // Initialize media elements
         initializeCarouselMedia(carousel);
 
+        // Initialize video players
+        initializeVideoPlayers();
+
         // Update navigation on scroll
         track.addEventListener('scroll', () => {
             updateCarouselNavigation(carousel);
-
-            // Pause videos when scrolling away
             pauseVideosOnScroll(carousel);
         });
 
@@ -1202,9 +1211,7 @@ function initializePostCarousels() {
         // Initial update
         updateCarouselNavigation(carousel);
     });
-}
-
-// Initialize media elements in carousel
+}// Initialize media elements in carousel
 function initializeCarouselMedia(carousel) {
     const slides = carousel.querySelectorAll('.carousel-slide');
 
@@ -2040,7 +2047,7 @@ function renderPostsToContainer(container, posts) {
             </div>
 
             <div class="post-stats">
-                <span>{post.likesCount || 0} Likes</span>
+                <span>${post.likesCount || 0} Likes</span>
                 <span>${post.commentsCount || 0} Comments</span>
             </div>
 
@@ -2776,6 +2783,7 @@ function requestDownloadPermission(fileUrl, filename) {
 }
 
 // Enhanced file item rendering with proper download handlers
+// Enhanced file item rendering with proper download handlers
 function renderFileItem(file) {
     // Cloudinary returns full URLs, so no need to prepend API_BASE_URL
     const fullUrl = file.url; // Already a complete Cloudinary URL
@@ -2791,19 +2799,19 @@ function renderFileItem(file) {
 
         case 'video':
             return `
-                <div class="media-container">
-                    <video class="post-file-video" preload="metadata" 
-                           onclick="handleVideoClick(event, this, '${fullUrl}', '${filename}')">
-                        <source src="${fullUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <div class="video-controls-overlay" onclick="handleVideoControlsClick(event, '${fullUrl}', '${filename}')">
-                        <button class="video-play-btn">
-                            <i class='bx bx-play'></i>
-                        </button>
-                    </div>
-                </div>
-            `;
+        <div class="media-container">
+            <video class="post-file-video" preload="metadata" 
+                   onclick="handleVideoClick(event, this)">
+                <source src="${fullUrl}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="video-controls-overlay" onclick="maximizeVideo('${fullUrl}', '${filename}')">
+                <button class="video-play-btn">
+                    <i class='bx bx-play'></i>
+                </button>
+            </div>
+        </div>
+    `;
 
         case 'document':
             return `
@@ -2823,7 +2831,9 @@ function renderFileItem(file) {
             return '';
     }
 }
+
 // Enhanced maximize controls with download buttons
+// Enhanced maximize controls with download buttons - FIXED
 function maximizeImage(imageUrl, filename) {
     const modal = document.createElement('div');
     modal.className = 'image-maximize-modal active';
@@ -2853,8 +2863,77 @@ function maximizeImage(imageUrl, filename) {
 
     document.addEventListener('keydown', handleMaximizeKeydown);
 }
-// Enhanced video maximize with download button
-function maximizeVideo(videoUrl) {
+
+function closeMaximizedVideo() {
+    if (currentMaximizedVideo) {
+        currentMaximizedVideo.pause();
+        currentMaximizedVideo = null;
+    }
+
+    const modal = document.querySelector('.video-maximize-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
+    }
+    document.removeEventListener('keydown', handleVideoMaximizeKeydown);
+}
+// Initialize all video players with proper event handlers
+// ============================================
+// FIXED VIDEO PLAYBACK SYSTEM - COMPLETE FUNCTIONS
+// ============================================
+
+// Initialize all video players with proper event handlers
+function initializeVideoPlayers() {
+    document.querySelectorAll('video').forEach(video => {
+        // Remove any existing click handlers
+        video.onclick = null;
+
+        // Add simplified click handler
+        video.addEventListener('click', function(e) {
+            handleVideoClick(e, this);
+        });
+
+        // Handle video end
+        video.addEventListener('ended', function() {
+            const container = this.closest('.media-container');
+            if (container) {
+                container.classList.remove('video-playing');
+                const playBtn = container.querySelector('.video-play-btn i');
+                if (playBtn) {
+                    playBtn.className = 'bx bx-play';
+                }
+            }
+            if (currentPlayingVideo === this) {
+                currentPlayingVideo = null;
+            }
+        });
+    });
+}
+
+function updateMaximizedVideoControls(isPlaying) {
+    const playPauseIcon = document.querySelector('.video-maximize-modal .video-play-btn i');
+    if (playPauseIcon) {
+        playPauseIcon.className = isPlaying ? 'bx bx-pause' : 'bx bx-play';
+    }
+}
+
+function toggleMaximizedVideoPlay() {
+    if (!currentMaximizedVideo) return;
+
+    if (currentMaximizedVideo.paused) {
+        currentMaximizedVideo.play();
+    } else {
+        currentMaximizedVideo.pause();
+    }
+}
+
+// Enhanced video maximize with download button - FIXED VERSION
+// Enhanced video maximize with download button - FIXED VERSION
+function maximizeVideo(videoUrl, filename) {
     // Pause any currently playing video
     if (currentPlayingVideo) {
         currentPlayingVideo.pause();
@@ -2878,16 +2957,16 @@ function maximizeVideo(videoUrl) {
                 <source src="${videoUrl}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
-           <div class="maximize-controls">
-            <div class="maximize-controls-right">
-                <button class="maximize-btn" onclick="requestDownloadPermission('${imageUrl}', '${filename}')">
-                    <i class='bx bx-download'></i>
-                </button>
-                <button class="maximize-btn" onclick="closeMaximizedImage()">
-                    <i class='bx bx-x'></i>
-                </button>
+            <div class="maximize-controls">
+                <div class="maximize-controls-right">
+                    <button class="maximize-btn" onclick="requestDownloadPermission('${videoUrl}', '${filename}')">
+                        <i class='bx bx-download'></i>
+                    </button>
+                    <button class="maximize-btn" onclick="closeMaximizedVideo()">
+                        <i class='bx bx-x'></i>
+                    </button>
+                </div>
             </div>
-        </div>
         </div>
     `;
 
@@ -2930,9 +3009,10 @@ function maximizeVideo(videoUrl) {
     // Auto-play the video
     video.play().catch(error => {
         console.error('Error auto-playing maximized video:', error);
+        // Show play button if auto-play fails
+        video.controls = true;
     });
 }
-
 // New function for document preview instead of direct download
 function openDocumentPreview(documentUrl, filename) {
     const modal = document.createElement('div');
@@ -3003,16 +3083,41 @@ function confirmDownload(fileUrl, filename) {
     }, 100);
 }
 
+// Enhanced download execution with Cloudinary support
 function executeDownload(url, filename) {
     showTemporaryModal('Preparing download...');
 
+    // For Cloudinary URLs, we need to ensure proper download format
+    let downloadUrl = url;
+
+    // If it's a Cloudinary URL, we might need to add flags for download
+    if (url.includes('cloudinary.com')) {
+        // Check if it already has transformation parameters
+        if (!url.includes('/fl_attachment/')) {
+            // Add attachment flag to Cloudinary URL for proper download
+            downloadUrl = url.replace(/\/upload\//, '/upload/fl_attachment/');
+        }
+    }
+
     // Create a temporary anchor element for download
     const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.style.display = 'none';
-    link.target = '_blank'; // Open in new tab for better UX
+    link.href = downloadUrl;
 
+    // Set the download attribute with the filename
+    if (filename) {
+        link.download = filename;
+    } else {
+        // Extract filename from URL if not provided
+        const urlParts = url.split('/');
+        link.download = urlParts[urlParts.length - 1];
+    }
+
+    link.style.display = 'none';
+
+    // For security and better UX, we'll use _blank for downloads
+    link.target = '_blank';
+
+    // Add to DOM
     document.body.appendChild(link);
 
     // Trigger download
@@ -3021,10 +3126,33 @@ function executeDownload(url, filename) {
     // Clean up
     setTimeout(() => {
         document.body.removeChild(link);
-        showTemporaryModal('Download started!');
-    }, 1000);
-}
 
+        // Show success message
+        const successModal = document.createElement('div');
+        successModal.className = 'notification-modal success active';
+        successModal.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-icon success">
+                    <i class='bx bx-check-circle'></i>
+                </div>
+                <h3 class="notification-title">Download Started!</h3>
+                <p class="notification-message">"${filename}" is being downloaded to your device.</p>
+                <button class="notification-btn" onclick="closeNotificationModal(this)">
+                    OK
+                </button>
+            </div>
+        `;
+        document.body.appendChild(successModal);
+
+        // Auto-close success modal after 3 seconds
+        setTimeout(() => {
+            if (successModal.parentNode) {
+                successModal.remove();
+            }
+        }, 3000);
+
+    }, 100);
+}
 // ============================================
 // EXPORT FUNCTIONS FOR HTML
 // ============================================
