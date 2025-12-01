@@ -5,10 +5,7 @@
 // Better approach - works in both development and production
 //const API_BASE_URL = 'https://shareview-production.up.railway.app';  // For production
 // login.js - Improved version with better debugging
-const API_BASE_URL = window.location.hostname === 'localhost' ||
-window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8080'
-    : 'https://shareview-production.up.railway.app';
+const API_BASE_URL = 'https://shareview-production.up.railway.app';
 
 // State management
 let authState = {
