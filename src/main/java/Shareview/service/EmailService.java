@@ -30,29 +30,40 @@ public class EmailService {
 
     public void sendOTP(String email) {
         try {
+            // Generate OTP
             String otp = generateOTP();
-            LOGGER.info("Generated OTP: " + otp);
 
+            // Log to console (for demo)
+            LOGGER.info("📧 OTP for " + email + ": " + otp);
+
+            // Delete any existing OTP for this email
             Optional<OTP> existingOtp = otpRepository.findByEmail(email);
             existingOtp.ifPresent(otpRepository::delete);
 
-            if (!otpRepository.findAll().isEmpty()) {
-                deleteExpiredOTPs();
-            }
-
+            // Save new OTP to database
             OTP otpEntity = new OTP();
             otpEntity.setEmail(email);
             otpEntity.setOtpCode(otp);
-            otpEntity.setExpiresAt(LocalDateTime.now().plusMinutes(2));
+            otpEntity.setExpiresAt(LocalDateTime.now().plusMinutes(5));
             otpRepository.save(otpEntity);
 
-            sendEmail(email, otp);
+            LOGGER.info("OTP saved to database for: " + email);
+
+            // Try to send email
+            try {
+                sendEmail(email, otp);
+                LOGGER.info("Email sent successfully to: " + email);
+            } catch (Exception emailError) {
+                // Email failed, but OTP is still saved to database
+                LOGGER.warning("Email sending failed, but OTP saved to database: " + emailError.getMessage());
+                // Don't throw - continue without email
+            }
+
         } catch (Exception e) {
-            LOGGER.severe("Failed to send OTP email: " + e.getMessage());
-            throw new RuntimeException("Error sending OTP. Please try again.");
+            LOGGER.severe("Failed to generate OTP: " + e.getMessage());
+            // Don't throw - just log for demo
         }
     }
-
     // Method to verify OTP
     public OTPVerificationResult verifyOTP(String email, String otp) {
         try {
@@ -94,34 +105,29 @@ public class EmailService {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
 
+
     private void sendEmail(String email, String otp) {
         try {
-            LOGGER.info("Attempting to send email to: " + email);
-
-            // Add debugging for mail configuration (fixed)
-            if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl senderImpl) {
-                LOGGER.info("Mail host: " + senderImpl.getHost());
-                LOGGER.info("Mail port: " + senderImpl.getPort());
-                LOGGER.info("Mail username: " + senderImpl.getUsername());
-            }
-
             SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom("ganadskie29@gmail.com");  // Your Gmail
             message.setTo(email);
             message.setSubject("Your OTP Code - ShareView");
-            message.setText("Your OTP Code is: " + otp + "\nIt expires in 2 minutes.\n\nDo not share this code with anyone.");
+            message.setText(
+                    "Your OTP Code is: " + otp + "\n\n" +
+                            "It expires in 5 minutes.\n\n" +
+                            "Do not share this code with anyone.\n\n" +
+                            "Thank you,\n" +
+                            "ShareView Team"
+            );
 
-            LOGGER.info("Email message prepared, sending...");
             mailSender.send(message);
-            LOGGER.info("OTP email sent successfully to: " + email);
+            LOGGER.info("📧 Email sent to: " + email);
 
         } catch (Exception e) {
-            LOGGER.severe("Failed to send OTP email: " + e.getMessage());
-            LOGGER.severe("Exception type: " + e.getClass().getName());
-            e.printStackTrace();
-            throw new RuntimeException("Failed to send email: " + e.getMessage());
+            LOGGER.severe("Email sending failed: " + e.getMessage());
+            throw new RuntimeException("Email failed: " + e.getMessage());
         }
-    }
-    public void deleteExpiredOTPs() {
+    }    public void deleteExpiredOTPs() {
         try {
             LocalDateTime now = LocalDateTime.now();
             otpRepository.deleteAllByExpiresAtBefore(now);
