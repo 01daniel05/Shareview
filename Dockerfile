@@ -1,26 +1,20 @@
 # Multi-stage build
-FROM openjdk:17-slim AS builder
+FROM eclipse-temurin:17-jdk-alpine AS builder
 
-# Install dependencies
-RUN apt-get update && apt-get install -y curl tar bash procps && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install Maven
+RUN apk add --no-cache maven
 
 # Set working directory
 WORKDIR /app
 
-# Copy Maven wrapper
+# Copy project files
+COPY pom.xml .
+COPY src src
 COPY mvnw .
 COPY .mvn .mvn
-COPY pom.xml .
 
 # Make mvnw executable
 RUN chmod +x mvnw
-
-# Download dependencies (cached)
-RUN ./mvnw dependency:go-offline -B
-
-# Copy source code
-COPY src src
 
 # Build application
 RUN ./mvnw clean package -DskipTests
@@ -28,28 +22,20 @@ RUN ./mvnw clean package -DskipTests
 # ============================================
 # Production stage
 # ============================================
-FROM openjdk:17-slim
-
-# Install MySQL client for health checks (optional)
-RUN apt-get update && apt-get install -y mysql-client curl && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+FROM eclipse-temurin:17-jre-alpine
 
 # Create non-root user
-RUN addgroup --system spring && adduser --system --ingroup spring spring
+RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
 # Set working directory
 WORKDIR /app
 
 # Copy JAR from builder
-COPY --from=builder --chown=spring:spring /app/target/shareview-backend-*.jar app.jar
+COPY --from=builder /app/target/*.jar app.jar
 
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
-    CMD curl -f http://localhost:8080/actuator/health || exit 1
-
-# Run with optimization flags
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
