@@ -131,8 +131,22 @@ public class AuthController {
 
     @PostMapping("/send-otp")
     public ResponseEntity<Map<String, String>> sendOTP(@RequestBody Map<String, String> body) {
-        emailService.sendOTP(body.get("email"));
-        return ResponseEntity.ok(Map.of("message", "OTP sent!", "status", "success"));
+        try {
+            String email = body.get("email");
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Email is required", "status", "error"));
+            }
+            System.out.println("Sending OTP to email: " + email);
+            emailService.sendOTP(email);
+            System.out.println("Sending OTP to email: " + email);
+
+            return ResponseEntity.ok(Map.of("message", "OTP sent!", "status", "success"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to send OTP: " + e.getMessage(), "status", "error"));
+        }
     }
 
     @PostMapping("/verify-otp")

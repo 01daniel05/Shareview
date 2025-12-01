@@ -28,7 +28,6 @@ public class EmailService {
     private static final Logger LOGGER = Logger.getLogger(EmailService.class.getName());
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    // Method to send OTP
     public void sendOTP(String email) {
         try {
             String otp = generateOTP();
@@ -56,36 +55,40 @@ public class EmailService {
 
     // Method to verify OTP
     public OTPVerificationResult verifyOTP(String email, String otp) {
-        Optional<OTP> storedOtp = otpRepository.findByEmail(email);
+        try {
+            Optional<OTP> storedOtp = otpRepository.findByEmail(email);
 
-        if (storedOtp.isEmpty()) {
-            LOGGER.warning("No OTP found for email: " + email);
-            return new OTPVerificationResult(false, "No OTP found. Please request a new one.");
-        }
+            if (storedOtp.isEmpty()) {
+                LOGGER.warning("No OTP found for email: " + email);
+                return new OTPVerificationResult(false, "No OTP found. Please request a new one.");
+            }
 
-        // Only delete expired if any OTPs exist
-        if (!otpRepository.findAll().isEmpty()) {
+            // Clean up expired OTPs first
             deleteExpiredOTPs();
-        }
 
-        OTP otpRecord = storedOtp.get();
-        LOGGER.info("Checking OTP for email: " + email);
+            OTP otpRecord = storedOtp.get();
+            LOGGER.info("Checking OTP for email: " + email);
 
-        if (LocalDateTime.now().isAfter(otpRecord.getExpiresAt())) {
-            otpRepository.delete(otpRecord);
-            LOGGER.warning("OTP expired for email: " + email);
-            return new OTPVerificationResult(false, "OTP has expired. Please request a new one.");
-        }
+            if (LocalDateTime.now().isAfter(otpRecord.getExpiresAt())) {
+                otpRepository.delete(otpRecord);
+                LOGGER.warning("OTP expired for email: " + email);
+                return new OTPVerificationResult(false, "OTP has expired. Please request a new one.");
+            }
 
-        if (otpRecord.getOtpCode().equals(otp)) {
-            otpRepository.delete(otpRecord);
-            LOGGER.info("OTP verified successfully for email: " + email);
-            return new OTPVerificationResult(true, "OTP verified successfully.");
-        } else {
-            LOGGER.warning("Invalid OTP entered for email: " + email);
-            return new OTPVerificationResult(false, "Invalid OTP. Please try again.");
+            if (otpRecord.getOtpCode().equals(otp)) {
+                otpRepository.delete(otpRecord);
+                LOGGER.info("OTP verified successfully for email: " + email);
+                return new OTPVerificationResult(true, "OTP verified successfully.");
+            } else {
+                LOGGER.warning("Invalid OTP entered for email: " + email);
+                return new OTPVerificationResult(false, "Invalid OTP. Please try again.");
+            }
+        } catch (Exception e) {
+            LOGGER.severe("Error verifying OTP: " + e.getMessage());
+            return new OTPVerificationResult(false, "Error verifying OTP. Please try again.");
         }
     }
+
     // Helper method to generate a secure 6-digit OTP
     private String generateOTP() {
         return String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
@@ -93,25 +96,31 @@ public class EmailService {
 
     private void sendEmail(String email, String otp) {
         try {
+            LOGGER.info("Attempting to send email to: " + email);
+
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(email);
-            message.setSubject("Your OTP Code");
-            message.setText("Your OTP Code is: " + otp + "\nIt expires in 2 minutes.");
+            message.setSubject("Your OTP Code - ShareView");
+            message.setText("Your OTP Code is: " + otp + "\nIt expires in 2 minutes.\n\nDo not share this code with anyone.");
 
+            LOGGER.info("Email message prepared, sending...");
             mailSender.send(message);
             LOGGER.info("OTP email sent successfully to: " + email);
+
         } catch (Exception e) {
             LOGGER.severe("Failed to send OTP email: " + e.getMessage());
             e.printStackTrace();
-            throw new RuntimeException("Error sending OTP. Please try again.");
+            throw new RuntimeException("Failed to send email: " + e.getMessage());
         }
     }
 
-    // Just a helper method now — no annotation!
     public void deleteExpiredOTPs() {
-        LocalDateTime now = LocalDateTime.now();
-        otpRepository.deleteAllByExpiresAtBefore(now);
-        LOGGER.info("Expired OTPs deleted at " + now);
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            otpRepository.deleteAllByExpiresAtBefore(now);
+            LOGGER.info("Expired OTPs cleaned up");
+        } catch (Exception e) {
+            LOGGER.warning("Error deleting expired OTPs: " + e.getMessage());
+        }
     }
-
 }

@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
 @Configuration
 public class WebConfig {
 
@@ -16,12 +17,14 @@ public class WebConfig {
                         .allowedOrigins(
                                 "http://localhost",
                                 "http://127.0.0.1",
+                                "http://localhost:3000",  // Add your frontend port
                                 "http://localhost:8080",
-                                "https://shareview-production.up.railway.app" // Your backend
+                                "https://shareview-production.up.railway.app"
                         )
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
-                        .allowCredentials(true);
+                        .allowCredentials(true)
+                        .maxAge(3600); // Cache preflight response for 1 hour
             }
         };
     }

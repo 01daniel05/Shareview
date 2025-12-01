@@ -3,7 +3,9 @@
 // ============================================
 
 // Better approach - works in both development and production
-const API_BASE_URL = 'https://shareview-production.up.railway.app';  // For production
+//const API_BASE_URL = 'https://shareview-production.up.railway.app';  // For production
+// login.js - Improved version with better debugging
+const API_BASE_URL = 'https://shareview-production.up.railway.app';
 
 // State management
 let authState = {
@@ -156,8 +158,11 @@ async function forgotPassword() {
     });
 }
 
+
+console.log('Using API Base URL:', API_BASE_URL);
+
 // ============================================
-// SEND OTP
+// SEND OTP - IMPROVED VERSION
 // ============================================
 async function sendOtp() {
     const emailInput = authState.isForgotPasswordFlow
@@ -179,23 +184,37 @@ async function sendOtp() {
 
     showLoadingModal("Sending OTP...");
     try {
+        console.log(`Sending OTP request to: ${API_BASE_URL}/auth/send-otp`);
+        console.log(`Email: ${email}`);
+
         const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
             body: JSON.stringify({email})
         });
 
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const responseData = await response.json();
-        if (response.ok && responseData.status === "success") {
+        console.log('Response data:', responseData);
+
+        if (responseData.status === "success") {
             handleOtpSent();
         } else {
             showLoadingModal(responseData.message || "Failed to send OTP.");
             setTimeout(hideLoadingModal, 2000);
         }
     } catch (error) {
-        console.error("OTP send error:", error);
-        showLoadingModal("Server error. Please try again later.");
-        setTimeout(hideLoadingModal, 2000);
+        console.error("OTP send error details:", error);
+        showLoadingModal("Cannot connect to server. Please check if the backend is running.");
+        setTimeout(hideLoadingModal, 3000);
     }
 }
 
