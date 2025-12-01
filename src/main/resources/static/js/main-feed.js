@@ -1,7 +1,7 @@
 // ============================================
 // MAIN-FEED.JS - UPDATED & FIXED VERSION
 // ============================================
-const API_BASE_URL = 'https://shareview-production.up.railway.app';  // For production
+const API_BASE_URL = 'https://shareview-vovf.onrender.com';  // For production
 
 // ============================================
 // UI TOGGLE FUNCTIONS

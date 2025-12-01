@@ -5,7 +5,7 @@
 // Better approach - works in both development and production
 //const API_BASE_URL = 'https://shareview-production.up.railway.app';  // For production
 // login.js - Improved version with better debugging
-const API_BASE_URL = 'https://shareview-production.up.railway.app';
+const API_BASE_URL = 'https://shareview-vovf.onrender.com';
 
 // State management
 let authState = {
