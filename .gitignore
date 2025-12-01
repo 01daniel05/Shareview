@@ -39,12 +39,8 @@ Thumbs.db
 *.ear
 
 # =====================
-# Environment
+# Environment - FIXED
 # =====================
 .env
-*.properties
-
-# =====================
-# Git
-# =====================
-.gitignore
+application-local.properties
+application-dev.properties

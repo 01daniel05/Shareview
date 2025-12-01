@@ -98,6 +98,13 @@ public class EmailService {
         try {
             LOGGER.info("Attempting to send email to: " + email);
 
+            // Add debugging for mail configuration (fixed)
+            if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl senderImpl) {
+                LOGGER.info("Mail host: " + senderImpl.getHost());
+                LOGGER.info("Mail port: " + senderImpl.getPort());
+                LOGGER.info("Mail username: " + senderImpl.getUsername());
+            }
+
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(email);
             message.setSubject("Your OTP Code - ShareView");
@@ -109,11 +116,11 @@ public class EmailService {
 
         } catch (Exception e) {
             LOGGER.severe("Failed to send OTP email: " + e.getMessage());
+            LOGGER.severe("Exception type: " + e.getClass().getName());
             e.printStackTrace();
             throw new RuntimeException("Failed to send email: " + e.getMessage());
         }
     }
-
     public void deleteExpiredOTPs() {
         try {
             LocalDateTime now = LocalDateTime.now();
