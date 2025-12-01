@@ -14,10 +14,13 @@ C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\controller\Au
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\model\User.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\model\PostLike.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\model\PostReport.java
+C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\service\CloudinaryService.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\dto\OTPVerificationResult.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\repository\SavedPostRepository.java
+C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\configuration\SecurityConfig.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\repository\OTPRepository.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\model\SavedPost.java
+C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\configuration\CloudinaryConfig.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\repository\PostLikeRepository.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\service\UserService.java
 C:\Users\ACER ASPIRE 3\Downloads\Shareview\src\main\java\Shareview\service\AuthService.java

@@ -4,8 +4,11 @@ Shareview\repository\SavedPostRepository.class
 Shareview\model\User.class
 Shareview\model\PostReport.class
 Shareview\configuration\WebConfig.class
+Shareview\configuration\SecurityConfig.class
 Shareview\repository\CommentRepository.class
 Shareview\model\SavedPost.class
+Shareview\service\CloudinaryService.class
+Shareview\configuration\WebConfig$1.class
 Shareview\dto\OTPVerificationResult.class
 Shareview\service\AuthService.class
 Shareview\service\EmailService.class
@@ -24,4 +27,5 @@ Shareview\repository\UserRepository.class
 Shareview\controller\CommentController.class
 Shareview\service\UserService.class
 Shareview\ShareviewApplication.class
+Shareview\configuration\CloudinaryConfig.class
 Shareview\repository\PostLikeRepository.class
