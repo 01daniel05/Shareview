@@ -7,27 +7,29 @@ services:
     plan: free
     env: docker
     region: singapore
-    healthCheckPath: /actuator/health
     autoDeploy: true
     envVars:
       - key: PORT
         value: 8080
-      - key: MYSQL_URL
+      # MySQL Database Variables (YOUR NAMES)
+      - key: SPRING_DATABASE_URL
         fromDatabase:
           name: shareview-mysql
           property: url
-      - key: MYSQL_USERNAME
+      - key: SPRING_DATABASE_USERNAME
         fromDatabase:
           name: shareview-mysql
           property: username
-      - key: MYSQL_PASSWORD
+      - key: SPRING_DATABASE_PASSWORD
         fromDatabase:
           name: shareview-mysql
           property: password
-      - key: GMAIL_USERNAME
+      # Email Variables (YOUR NAMES)
+      - key: USER_EMAIL
         sync: false
-      - key: GMAIL_PASSWORD
+      - key: USER_PASS
         sync: false
+      # Cloudinary Variables (YOUR NAMES)
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
