@@ -1,6 +1,3 @@
-    /* ============================================
-       RESPONSIVE STYLES
-    ============================================ */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
 
 * {
@@ -13,6 +10,7 @@
 body {
     background-size: cover;
     background: url("../images/banner.png") no-repeat fixed;
+    background-position: center;
 }
 
 .wrapper {
@@ -53,7 +51,6 @@ body {
     align-items: center;
     justify-items: center;
     width: 900px;
-    max-width: 100%;
     height: 600px;
     overflow: hidden;
     z-index: 2;
@@ -64,14 +61,11 @@ body {
     backdrop-filter: blur(5px);
     border-radius: 20px;
     transition: all .5s ease-in-out;
-    background: rgba(0, 0, 0, 0.3);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
 }
 
 .login-container {
     left: 0;
     width: 900px;
-    max-width: 100%;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -92,7 +86,6 @@ body {
 .register-container {
     right: -120%;
     width: 600px;
-    max-width: 100%;
     display: flex;
     flex-direction: column;
     justify-items: center;
@@ -150,7 +143,6 @@ body {
     font-size: 18px;
 }
 
-/* Icon on the left (user, lock) */
 .input-box1 .bx-user,
 .input-box1 .bx-lock-alt,
 .input-box1 .bx-envelope,
@@ -159,7 +151,6 @@ body {
     left: 15px;
 }
 
-/* Toggle icon on the right */
 #toggle-login-password {
     right: 15px;
 }
@@ -298,7 +289,6 @@ body {
     border-radius: 15px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     width: 350px;
-    max-width: 90%;
     text-align: center;
 }
 
@@ -359,100 +349,79 @@ body {
     background: #4b5563;
 }
 
-/* Loading Modal */
-.loading-modal {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
-
-.loading-modal-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 15px;
-    text-align: center;
-    max-width: 300px;
-    width: 90%;
-}
-
-.loading-modal-content p {
-    margin-bottom: 1rem;
-    font-weight: 500;
-}
-
-.spinner {
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-left-color: #667eea;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Confirm Modal */
-.confirm-modal {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
-
-.confirm-modal-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 15px;
-    text-align: center;
-    max-width: 400px;
-    width: 90%;
-}
-
-.confirm-modal-content p {
-    margin-bottom: 1.5rem;
-    font-weight: 500;
-}
-
-.confirm-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
 /* ============================================
-   RESPONSIVE MEDIA QUERIES
-============================================ */
+   RESPONSIVE DESIGN - TABLETS AND BELOW
+   ============================================ */
 
-/* Tablets and small laptops */
+/* Tablets (768px - 1024px) */
 @media only screen and (max-width: 1024px) {
     .form-box {
-        width: 90%;
+        width: 700px;
         height: auto;
-        margin: 20px 0;
     }
 
     .login-container {
-        flex-direction: column;
+        width: 700px;
         padding: 30px;
+    }
+
+    .register-container {
+        position: fixed;
+        top: 40px;
+        width: 550px;
+    }
+
+    .nav-logo-name p {
+        font-size: 26px;
+        padding: 25px 40px;
+    }
+}
+
+/* Mobile Devices (481px - 768px) */
+@media only screen and (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+    }
+
+    .wrapper {
+        padding: 10px;
+        align-items: flex-start;
+        padding-top: 100px;
+    }
+
+    .nav {
+        height: 70px;
+    }
+
+    .nav-logo-name p {
+        font-size: 24px;
+        padding: 20px 30px;
+    }
+
+    .form-box {
+        width: 100%;
+        max-width: 500px;
+        height: auto;
+        min-height: auto;
+    }
+
+    .login-container {
+        width: 100%;
+        flex-direction: column;
+        padding: 30px 20px;
         gap: 20px;
+        position: relative;
+    }
+
+    .login-split {
+        width: 100%;
     }
 
     .login-split:first-child {
         padding-right: 0;
-        border-right: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         padding-bottom: 20px;
         margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .login-split:first-child header,
@@ -460,37 +429,19 @@ body {
         text-align: center;
     }
 
+    .login-split:first-child header {
+        font-size: 26px;
+    }
+
     .register-container {
-        width: 90%;
-        padding: 30px;
-    }
-}
-
-/* Mobile devices */
-@media only screen and (max-width: 768px) {
-    .nav-logo-name p {
-        font-size: 24px;
-        padding: 20px 30px;
-    }
-
-    .wrapper {
-        padding: 10px;
-    }
-
-    .form-box {
-        width: 95%;
-    }
-
-    .login-container, .register-container {
-        padding: 20px;
+        position: fixed;
+        top: 40px;
+        width: 100%;
+        padding: 30px 20px;
     }
 
     .top, .login-container header {
         font-size: 24px;
-    }
-
-    .login-split:first-child header {
-        font-size: 26px;
     }
 
     .form-one {
@@ -498,55 +449,198 @@ body {
         gap: 0;
     }
 
+    .input-box1 {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        height: 48px;
+        font-size: 14px;
+    }
+
     .two-btn {
         flex-direction: column;
-        gap: 10px;
         align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    .submit button {
+        height: 48px;
+        font-size: 15px;
+    }
+
+    .bottom span {
+        font-size: 13px;
     }
 
     .otp-modal-content, .reset-modal-content {
+        width: 90%;
+        max-width: 350px;
         padding: 1.5rem;
     }
 
-    .otp-buttons, .reset-buttons {
-        flex-direction: column;
+    .otp-modal-content h2, .reset-modal-content h2 {
+        font-size: 1.3rem;
     }
 }
 
-/* Small mobile devices */
+/* Small Mobile Devices (320px - 480px) */
 @media only screen and (max-width: 480px) {
+    .wrapper {
+        padding: 5px;
+        padding-top: 90px;
+    }
+
+    .nav {
+        height: 60px;
+    }
+
     .nav-logo-name p {
         font-size: 20px;
         padding: 15px 20px;
     }
 
-    .login-container, .register-container {
-        padding: 15px;
-    }
-
-    .top, .login-container header {
-        font-size: 20px;
+    .login-container,
+    .register-container {
+        position: fixed;
+        top: 40px;
+        padding: 25px 15px;
+        border-radius: 15px;
     }
 
     .login-split:first-child header {
         font-size: 22px;
     }
 
+    .top, .login-container header {
+        font-size: 20px;
+    }
+
     .welcome-text {
         font-size: 13px;
+        margin-bottom: 20px;
+    }
+
+    .login-split:first-child .welcome-text {
+        font-size: 14px;
     }
 
     .form-control {
         height: 45px;
-        font-size: 14px;
+        font-size: 13px;
+        padding: 0 12px 0 40px;
+    }
+
+    .input-box1 i {
+        font-size: 16px;
+    }
+
+    .input-box1 .bx-user,
+    .input-box1 .bx-lock-alt,
+    .input-box1 .bx-envelope,
+    .input-box1 .bx-calendar,
+    .input-box1 .bx-user-circle {
+        left: 12px;
+    }
+
+    .input-box1 .bx-show,
+    .input-box1 .bx-hide,
+    #toggle-login-password {
+        right: 12px;
+    }
+
+    .two-btn {
+        font-size: 12px;
     }
 
     .submit button {
         height: 45px;
-        font-size: 15px;
+        font-size: 14px;
     }
 
     .bottom span {
-        font-size: 13px;
+        font-size: 12px;
+    }
+
+    .otp-modal-content, .reset-modal-content {
+        width: 95%;
+        padding: 1.2rem;
+    }
+
+    .otp-modal-content h2, .reset-modal-content h2 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    #otp-input, #new-password, #confirm-new-password {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .verify-btn, .cancel-btn {
+        padding: 10px;
+        font-size: 14px;
+    }
+}
+
+/* Extra Small Devices (below 360px) */
+@media only screen and (max-width: 360px) {
+    .nav-logo-name p {
+        font-size: 18px;
+        padding: 12px 15px;
+    }
+
+    .login-container,
+    .register-container {
+        position: fixed;
+        top: 40px;
+        padding: 20px 12px;
+    }
+
+    .form-control {
+        height: 42px;
+        font-size: 12px;
+    }
+
+    .submit button {
+        height: 42px;
+    }
+}
+
+/* Landscape Mode for Mobile */
+@media only screen and (max-height: 600px) and (orientation: landscape) {
+    .wrapper {
+        padding-top: 80px;
+        padding-bottom: 20px;
+    }
+
+    .nav {
+        height: 60px;
+    }
+
+    .login-container,
+    .register-container {
+        position: fixed;
+        top: 40px;
+        padding: 20px 15px;
+    }
+
+    .login-split:first-child {
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+
+    .input-box1 {
+        margin-bottom: 12px;
+    }
+
+    .top, .login-container header {
+        font-size: 20px;
+        margin-bottom: 8px;
+    }
+
+    .welcome-text {
+        margin-bottom: 15px;
     }
 }

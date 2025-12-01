@@ -7,8 +7,10 @@
     <link rel="icon" type="image/png" href="/images/logo.png"
           style="border-radius: 50%; width:100px; height:100px ; object-fit:cover ">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <title>Shareview</title>
     <link rel="stylesheet" href="/css/style.css">
+
+    <title>Shareview</title>
+
 </head>
 
 <body>
@@ -126,7 +128,6 @@
         </div>
     </div>
 </div>
-
 <!-- OTP Modal -->
 <div id="otpModal" class="otp-modal hidden">
     <div class="otp-modal-content">
@@ -151,9 +152,10 @@
         </div>
     </div>
 </div>
-
+<script src="/js/script.js"></script>
+<script src="/js/modal.js"></script>
+<script src="/js/login.js"></script>
 <script>
-    // Access control script
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     const role = localStorage.getItem('userRole');
     const path = window.location.pathname;
@@ -165,15 +167,11 @@
 
     if (path.includes('/login-form') && isLoggedIn === "true") {
         denyAccess();
-    } else if (path.includes("/admin-dashboard") && role !== "ADMIN") {
+    } else if (path.includes("/admin-dashboard") && role !== "Admin") {
         denyAccess();
-    } else if (path.includes("/main-feed") && role !== "USER") {
+    } else if (path.includes("/main-feed") && role !== "User") {
         denyAccess();
     }
 </script>
-<scripT src="/js/modal.js"></script>
-<scripT src="/js/login.js"></script>
-<scripT src="/js/main-feed.js"></script>
-
 </body>
 </html>
