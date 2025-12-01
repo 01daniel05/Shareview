@@ -348,6 +348,39 @@ body {
 .cancel-btn:hover {
     background: #4b5563;
 }
+/* Make date input look like normal text input */
+input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding-left: 45px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 25px;
+    height: 50px;
+    width: 100%;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+/* Hide the native calendar icon on mobile */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    display: none;
+}
+
+/* Placeholder style for date */
+input[type="date"]::before {
+    content: attr(placeholder);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+input[type="date"]:focus::before,
+input[type="date"]:valid::before {
+    display: none;
+}
 
 /* ============================================
    RESPONSIVE DESIGN - TABLETS AND BELOW
