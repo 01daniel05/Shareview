@@ -48,6 +48,9 @@ public class EmailService {
         logger.info("================================");
     }
 
+    /**
+     * Send OTP via SendGrid Web API
+     */
     public void sendOTP(String email) {
         logger.info("=== SENDING OTP START ===");
         logger.info("Recipient: {}", email);

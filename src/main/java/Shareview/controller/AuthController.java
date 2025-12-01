@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +35,7 @@ public class AuthController {
 
     @Autowired
     public AuthController(OTPRepository otpRepository, UserRepository userRepository,
-                          EmailService emailService, AuthService authService, JavaMailSender mailSender) {
+                          EmailService emailService, AuthService authService) {
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
