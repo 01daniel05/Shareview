@@ -1,37 +1,24 @@
-# Multi-stage build
-FROM eclipse-temurin:17-jdk-alpine AS builder
-
-# Install Maven
-RUN apk add --no-cache maven
+# Use Maven with Java 17
+FROM maven:3.9.9-eclipse-temurin-17 AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Copy project files
-COPY pom.xml .
-COPY src src
-COPY mvnw .
-COPY .mvn .mvn
+# Copy everything
+COPY . .
 
-# Make mvnw executable
-RUN chmod +x mvnw
-
-# Build application
-RUN ./mvnw clean package -DskipTests
+# Build the application
+RUN mvn clean package -DskipTests
 
 # ============================================
-# Production stage
+# Runtime stage
 # ============================================
 FROM eclipse-temurin:17-jre-alpine
 
-# Create non-root user
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
-
 # Set working directory
 WORKDIR /app
 
-# Copy JAR from builder
+# Copy the JAR file
 COPY --from=builder /app/target/*.jar app.jar
 
 # Expose port
