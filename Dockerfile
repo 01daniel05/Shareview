@@ -1,5 +1,5 @@
 # Multi-stage build
-FROM openjdk:17-jdk-slim AS builder
+FROM openjdk:17-slim AS builder
 
 # Install dependencies
 RUN apt-get update && apt-get install -y curl tar bash procps && \
@@ -28,7 +28,7 @@ RUN ./mvnw clean package -DskipTests
 # ============================================
 # Production stage
 # ============================================
-FROM openjdk:17-jdk-slim
+FROM openjdk:17-slim
 
 # Install MySQL client for health checks (optional)
 RUN apt-get update && apt-get install -y mysql-client curl && \
