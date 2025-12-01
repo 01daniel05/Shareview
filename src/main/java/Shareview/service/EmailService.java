@@ -30,6 +30,8 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
     private final OTPRepository otpRepository;
+    @Autowired
+    private SendGridEmailService sendGridEmailService;
 
     @Value("${spring.mail.from:shareview682@gmail.com}")
     private String fromEmail;
@@ -38,12 +40,16 @@ public class EmailService {
     private String mailUsername;
 
     @Autowired
-    public EmailService(JavaMailSender mailSender, OTPRepository otpRepository) {
+    public EmailService(JavaMailSender mailSender, OTPRepository otpRepository,
+                        SendGridEmailService sendGridEmailService) {
         this.mailSender = mailSender;
         this.otpRepository = otpRepository;
+        this.sendGridEmailService = sendGridEmailService;
         logMailConfiguration();
-        testEmailConnection();
+        // Comment out SMTP connection test
+        // testEmailConnection();
     }
+
 
     /**
      * Log mail configuration on startup
@@ -82,6 +88,8 @@ public class EmailService {
         }
     }
 
+// In EmailService.java, update the sendOTP method:
+
     public void sendOTP(String email) {
         logger.info("=== SENDING OTP START ===");
         logger.info("Recipient: {}", email);
@@ -103,8 +111,9 @@ public class EmailService {
             otpRepository.save(otpEntity);
             logger.info("OTP saved to database");
 
-            // Send email
-            sendOTPEmail(email, otp);
+            // Send email via SendGrid Web API ONLY
+            logger.info("Attempting to send via SendGrid...");
+            sendGridEmailService.sendOTP(email, otp);
 
             logger.info("✅ OTP sent successfully to: {}", email);
 
@@ -115,7 +124,6 @@ public class EmailService {
             logger.info("=== SENDING OTP END ===");
         }
     }
-
     /**
      * Send OTP email with HTML and plain text fallback
      */
@@ -315,20 +323,5 @@ public class EmailService {
      * Test email sending
      */
     public boolean sendTestEmail(String toEmail) {
-        try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(toEmail);
-            message.setSubject("Test Email from ShareView");
-            message.setText("This is a test email to verify SendGrid configuration.\n\nTimestamp: " + LocalDateTime.now());
-
-            mailSender.send(message);
-            logger.info("✅ Test email sent to: {}", toEmail);
-            return true;
-
-        } catch (MailException e) {
-            logger.error("❌ Failed to send test email: {}", e.getMessage(), e);
-            return false;
-        }
-    }
-}
+        return sendGridEmailService.sendTestEmail(toEmail);
+    }}
