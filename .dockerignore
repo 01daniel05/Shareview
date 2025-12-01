@@ -1,0 +1,13 @@
+# .dockerignore
+target/
+.git
+*.iml
+.idea/
+.mvn/wrapper/maven-wrapper.properties
+*.log
+*.tmp
+*.jar.original
+Dockerfile
+.dockerignore
+render.yaml
+.env
