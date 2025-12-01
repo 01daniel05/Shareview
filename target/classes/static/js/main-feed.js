@@ -712,7 +712,6 @@ async function submitPost() {
         return;
     }
 
-    // Check total file size
     const totalSize = calculateTotalFileSize();
     if (totalSize > FILE_LIMITS.TOTAL) {
         showTemporaryModal(`Total file size too large (${(totalSize / 1024 / 1024).toFixed(1)}MB). Maximum is 100MB.`);
@@ -720,54 +719,181 @@ async function submitPost() {
     }
 
     try {
+        // 1. Close form and return to feed
+        toggleCreatePost();
+        showFeed();
+
+        // 2. Show uploading modal
+        showUploadingModal();
+
+        // 3. Prepare form data
         const formData = new FormData();
         formData.append('title', title);
         formData.append('content', content);
         formData.append('userId', userId);
 
-        // Append multiple files - extract file objects from the enhanced structure
-        selectedFiles.images.forEach(item => {
-            formData.append('images', item.file);
-        });
+        selectedFiles.images.forEach(item => formData.append('images', item.file));
+        selectedFiles.documents.forEach(item => formData.append('documents', item.file));
+        selectedFiles.videos.forEach(item => formData.append('videos', item.file));
 
-        selectedFiles.documents.forEach(item => {
-            formData.append('documents', item.file);
-        });
-
-        selectedFiles.videos.forEach(item => {
-            formData.append('videos', item.file);
-        });
-
-        console.log('Submitting post with files:', {
-            images: selectedFiles.images.length,
-            documents: selectedFiles.documents.length,
-            videos: selectedFiles.videos.length,
-            totalSize: formatFileSize(totalSize)
-        });
-
-        const response = await fetch(`${API_BASE_URL}/posts/multiple`, {
-            method: 'POST',
-            body: formData
-        });
-
+        // 4. Upload with progress
+        const response = await uploadWithProgress(formData);
         const data = await response.json();
 
-        if (response.ok && data.status === 'success') {
-            showTemporaryModal('Post created successfully!');
-            toggleCreatePost();
+        // 5. Hide uploading modal
+        hideUploadingModal();
 
-            // Clear form and files
+        if (response.ok && data.status === 'success') {
+            // 6. Show success notification
+            showSuccessModal('Post uploaded successfully! 🎉');
+
+            // 7. Clear form and reload
             resetPostForm();
             await loadPosts();
         } else {
-            showTemporaryModal(data.message || 'Failed to create post');
+            showErrorModal(data.message || 'Failed to create post');
         }
     } catch (error) {
         console.error('Error creating post:', error);
-        showTemporaryModal('Error creating post');
+        hideUploadingModal();
+        showErrorModal('Error uploading post. Please try again.');
+    }
+}// Upload with progress tracking
+function uploadWithProgress(formData) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                updateUploadProgress(percentComplete);
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            resolve({
+                ok: xhr.status >= 200 && xhr.status < 300,
+                status: xhr.status,
+                json: () => Promise.resolve(JSON.parse(xhr.responseText))
+            });
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+        xhr.open('POST', `${API_BASE_URL}/posts/multiple`);
+        xhr.send(formData);
+    });
+}
+
+// Show uploading modal
+function showUploadingModal() {
+    const existingModal = document.querySelector('.upload-progress-modal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'upload-progress-modal active';
+    modal.innerHTML = `
+        <div class="upload-progress-content">
+            <div class="upload-icon">
+                <i class='bx bx-cloud-upload bx-fade-up'></i>
+            </div>
+            <h3 class="upload-title">Uploading Your Post...</h3>
+            <p class="upload-message">Please wait while we upload your files</p>
+            
+            <div class="upload-progress-container">
+                <div class="upload-progress-bar">
+                    <div class="upload-progress-fill" id="uploadProgressFill"></div>
+                </div>
+                <div class="upload-progress-text" id="uploadProgressText">0%</div>
+            </div>
+
+            <div class="upload-details">
+                <div class="upload-detail-item">
+                    <i class='bx bx-image'></i>
+                    <span>${selectedFiles.images.length} Images</span>
+                </div>
+                <div class="upload-detail-item">
+                    <i class='bx bx-file'></i>
+                    <span>${selectedFiles.documents.length} Documents</span>
+                </div>
+                <div class="upload-detail-item">
+                    <i class='bx bx-video'></i>
+                    <span>${selectedFiles.videos.length} Videos</span>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Update progress
+function updateUploadProgress(percent) {
+    const progressFill = document.getElementById('uploadProgressFill');
+    const progressText = document.getElementById('uploadProgressText');
+    if (progressFill) progressFill.style.width = `${percent}%`;
+    if (progressText) progressText.textContent = `${Math.round(percent)}%`;
+}
+
+// Hide uploading modal
+function hideUploadingModal() {
+    const modal = document.querySelector('.upload-progress-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
     }
 }
 
+// Show success modal
+function showSuccessModal(message) {
+    const modal = document.createElement('div');
+    modal.className = 'notification-modal success active';
+    modal.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon success">
+                <i class='bx bx-check-circle'></i>
+            </div>
+            <h3 class="notification-title">Success!</h3>
+            <p class="notification-message">${message}</p>
+            <button class="notification-btn" onclick="closeNotificationModal(this)">
+                Got it!
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    setTimeout(() => closeNotificationModal(modal.querySelector('.notification-btn')), 3000);
+}
+
+// Show error modal
+function showErrorModal(message) {
+    const modal = document.createElement('div');
+    modal.className = 'notification-modal error active';
+    modal.innerHTML = `
+        <div class="notification-content">
+            <div class="notification-icon error">
+                <i class='bx bx-error-circle'></i>
+            </div>
+            <h3 class="notification-title">Upload Failed</h3>
+            <p class="notification-message">${message}</p>
+            <button class="notification-btn" onclick="closeNotificationModal(this)">
+                Try Again
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Close notification modal
+function closeNotificationModal(button) {
+    const modal = button.closest('.notification-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+// Export functions
+window.closeNotificationModal = closeNotificationModal;
 function resetPostForm() {
     document.querySelector('#createPostForm input[type="text"]').value = '';
     document.querySelector('#createPostForm textarea').value = '';
@@ -1827,10 +1953,18 @@ async function loadProfileContent(tabName) {
 // Helper function to extract filename from URL
 function getFileNameFromUrl(url) {
     if (!url) return 'Unknown File';
+
+    // For Cloudinary URLs
+    if (url.includes('cloudinary.com')) {
+        const parts = url.split('/');
+        // Remove file extension for display if needed
+        return parts[parts.length - 1];
+    }
+
+    // Fallback for other URLs
     const parts = url.split('/');
     const filename = parts[parts.length - 1];
-    // Remove timestamp prefix if present
-    return filename.replace(/^\d+_/, '');
+    return filename.replace(/^\d+_/, ''); // Remove timestamp prefix if present
 }
 
 function renderProfileContent(tabName, data) {
@@ -2631,7 +2765,8 @@ function requestDownloadPermission(fileUrl, filename) {
 
 // Enhanced file item rendering with proper download handlers
 function renderFileItem(file) {
-    const fullUrl = `${API_BASE_URL}${file.url}`;
+    // Cloudinary returns full URLs, so no need to prepend API_BASE_URL
+    const fullUrl = file.url; // Already a complete Cloudinary URL
     const filename = getFileNameFromUrl(file.url);
 
     switch (file.type) {
@@ -2639,7 +2774,6 @@ function renderFileItem(file) {
             return `
                 <div class="media-container" onclick="maximizeImage('${fullUrl}', '${filename}')">
                     <img src="${fullUrl}" alt="${filename}" class="post-file-image" loading="lazy">
-                  
                 </div>
             `;
 
@@ -2656,29 +2790,27 @@ function renderFileItem(file) {
                             <i class='bx bx-play'></i>
                         </button>
                     </div>
-                   
                 </div>
             `;
 
         case 'document':
             return `
-        <div class="post-file-document" onclick="openDocumentPreview('${fullUrl}', '${filename}')">
-            <i class='bx bx-file'></i>
-            <div class="document-info">
-                <div class="document-name">${filename}</div>
-                <div class="document-type">Document</div>
-            </div>
-            <button class="download-btn" onclick="requestDownloadPermission('${fullUrl}', '${filename}')">
-                <i class='bx bx-download'></i>
-            </button>
-        </div>
-    `;
+                <div class="post-file-document" onclick="openDocumentPreview('${fullUrl}', '${filename}')">
+                    <i class='bx bx-file'></i>
+                    <div class="document-info">
+                        <div class="document-name">${filename}</div>
+                        <div class="document-type">Document</div>
+                    </div>
+                    <button class="download-btn" onclick="requestDownloadPermission('${fullUrl}', '${filename}')">
+                        <i class='bx bx-download'></i>
+                    </button>
+                </div>
+            `;
 
         default:
             return '';
     }
 }
-
 // Enhanced maximize controls with download buttons
 function maximizeImage(imageUrl, filename) {
     const modal = document.createElement('div');

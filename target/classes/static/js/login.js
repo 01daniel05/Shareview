@@ -3,9 +3,8 @@
 // ============================================
 
 // Better approach - works in both development and production
-const API_BASE_URL = window.location.hostname === 'localhost'
-    ? 'http://localhost:8080'  // For local development
-    : 'https://shareview-production.up.railway.app';  // For production
+//const API_BASE_URL = 'https://shareview-production.up.railway.app';  // For production
+const API_BASE_URL = 'https://localhost:8080';  // For production
 
 // State management
 let authState = {
