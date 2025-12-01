@@ -1,8 +1,20 @@
-// ============================================
-// MAIN-FEED.JS - UPDATED & FIXED VERSION
-// ============================================
-const API_BASE_URL = 'https://shareview-vovf.onrender.com';  // For production
 
+let API_BASE_URL;
+
+if (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1') {
+    // Local development
+    API_BASE_URL = 'http://localhost:8080';
+    console.log(' Running in LOCAL mode');
+} else if (window.location.hostname.includes('railway.app')) {
+    // Production on Render
+    API_BASE_URL = 'https://shareview-production.up.railway.app'; // ← CHANGE TO YOUR ACTUAL BACKEND URL
+    console.log(' Running in PRODUCTION mode');
+} else {
+    // Fallback
+    API_BASE_URL = 'https://shareview-vovf.onrender.com';
+    console.log(' Using fallback URL');
+}
 // ============================================
 // UI TOGGLE FUNCTIONS
 // ============================================
