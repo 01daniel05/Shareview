@@ -40,6 +40,10 @@ public class Post {
     private int likesCount = 0;
     private int commentsCount = 0;
 
+    // New fields for admin management
+    private String status = "PUBLISHED"; // PUBLISHED, FLAGGED, PENDING, REMOVED
+    private String flagReason;
+
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Comment> comments = new ArrayList<>();
@@ -86,6 +90,12 @@ public class Post {
     public int getCommentsCount() { return commentsCount; }
     public void setCommentsCount(int commentsCount) { this.commentsCount = commentsCount; }
 
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public String getFlagReason() { return flagReason; }
+    public void setFlagReason(String flagReason) { this.flagReason = flagReason; }
+
     public List<Comment> getComments() { return comments; }
     public void setComments(List<Comment> comments) { this.comments = comments; }
 
@@ -129,4 +139,14 @@ public class Post {
     public int getTotalFileCount() {
         return getImageUrlList().size() + getDocumentUrlList().size() + getVideoUrlList().size();
     }
+
+    public boolean isPublished() {
+        return "PUBLISHED".equals(this.status);
+    }
+
+    public boolean isFlagged() {
+        return "FLAGGED".equals(this.status);
+    }
+    public boolean isPending() { return "PENDING".equals(this.status); }
+    public boolean isRemoved() { return "REMOVED".equals(this.status); }
 }

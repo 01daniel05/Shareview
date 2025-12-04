@@ -30,6 +30,12 @@ public class PostReport {
 
     private LocalDateTime reportedAt = LocalDateTime.now();
 
+    // New fields for admin management
+    private String status = "PENDING"; // PENDING, RESOLVED, DISMISSED
+    private String resolutionAction; // remove_content, warn_user, dismiss
+    private String resolutionNotes;
+    private LocalDateTime resolvedAt;
+
     // ---------------- Constructors ----------------
     public PostReport() {}
 
@@ -38,6 +44,7 @@ public class PostReport {
         this.post = post;
         this.reason = reason;
         this.reportedAt = LocalDateTime.now();
+        this.status = "PENDING";
     }
 
     // ---------------- Getters and Setters ----------------
@@ -55,4 +62,25 @@ public class PostReport {
 
     public LocalDateTime getReportedAt() { return reportedAt; }
     public void setReportedAt(LocalDateTime reportedAt) { this.reportedAt = reportedAt; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public String getResolutionAction() { return resolutionAction; }
+    public void setResolutionAction(String resolutionAction) { this.resolutionAction = resolutionAction; }
+
+    public String getResolutionNotes() { return resolutionNotes; }
+    public void setResolutionNotes(String resolutionNotes) { this.resolutionNotes = resolutionNotes; }
+
+    public LocalDateTime getResolvedAt() { return resolvedAt; }
+    public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
+
+    // ---------------- Helper Methods ----------------
+    public boolean isPending() {
+        return "PENDING".equals(this.status);
+    }
+
+    public boolean isResolved() {
+        return "RESOLVED".equals(this.status);
+    }
 }

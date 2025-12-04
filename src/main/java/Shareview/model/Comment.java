@@ -70,4 +70,9 @@ public class Comment {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+
+    // Helper method to get userId for repository queries
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
+    }
 }

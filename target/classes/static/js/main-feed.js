@@ -3014,48 +3014,6 @@ function maximizeVideo(videoUrl, filename) {
     });
 }
 // New function for document preview instead of direct download
-function openDocumentPreview(documentUrl, filename) {
-    const modal = document.createElement('div');
-    modal.className = 'document-preview-modal active';
-    modal.innerHTML = `
-        <div class="document-preview-container">
-            <div class="document-preview-header">
-                <div class="document-preview-icon">
-                    <i class='bx bx-file'></i>
-                </div>
-                <div class="document-preview-info">
-                    <div class="document-preview-name">${filename}</div>
-                    <div class="document-preview-type">Document File</div>
-                </div>
-            </div>
-            <div class="document-preview-message">
-                <i class='bx bx-info-circle'></i>
-                This document cannot be previewed in the app.
-            </div>
-            <div class="document-preview-actions">
-                <button class="document-preview-btn secondary" onclick="closeDocumentPreview()">
-                    <i class='bx bx-x'></i>
-                    Cancel
-                </button>
-                <button class="document-preview-btn primary" onclick="requestDownloadPermission('${documentUrl}', '${filename}')">
-                    <i class='bx bx-download'></i>
-                    Download File
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeDocumentPreview();
-        }
-    });
-
-    document.addEventListener('keydown', handleDocumentPreviewKeydown);
-}
-
 function closeDocumentPreview() {
     const modal = document.querySelector('.document-preview-modal');
     if (modal) {

@@ -32,6 +32,11 @@ public class User {
     private String gender;
     private String role = "USER";
 
+    // New fields for admin management
+    private String status = "ACTIVE"; // ACTIVE, SUSPENDED, DELETED
+    private String suspensionReason;
+    private LocalDateTime suspendedAt;
+
     private String bio = "";
     private String profilePicture;
     private String coverPicture;
@@ -67,6 +72,7 @@ public class User {
         this.bDate = bDate;
         this.gender = gender;
         this.role = role;
+        this.status = "ACTIVE";
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -101,6 +107,15 @@ public class User {
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
 
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public String getSuspensionReason() { return suspensionReason; }
+    public void setSuspensionReason(String suspensionReason) { this.suspensionReason = suspensionReason; }
+
+    public LocalDateTime getSuspendedAt() { return suspendedAt; }
+    public void setSuspendedAt(LocalDateTime suspendedAt) { this.suspendedAt = suspendedAt; }
+
     public String getBio() { return bio; }
     public void setBio(String bio) { this.bio = bio; }
 
@@ -127,4 +142,13 @@ public class User {
 
     public List<SavedPost> getSavedPosts() { return savedPosts; }
     public void setSavedPosts(List<SavedPost> savedPosts) { this.savedPosts = savedPosts; }
+
+    // ---------------- Helper Methods ----------------
+    public boolean isActive() {
+        return "ACTIVE".equals(this.status);
+    }
+
+    public boolean isSuspended() {
+        return "SUSPENDED".equals(this.status);
+    }
 }

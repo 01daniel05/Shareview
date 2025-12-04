@@ -349,3 +349,163 @@ function hideLoadingModal() {
         setTimeout(() => modal.remove(), 300);
     }
 }
+function addErrorModalStyles() {
+    if (!document.querySelector('#error-modal-styles')) {
+        const style = document.createElement('style');
+        style.id = 'error-modal-styles';
+        style.textContent = `
+            .error-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.6);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                animation: fadeIn 0.3s ease;
+            }
+            
+            .error-modal-content {
+                background: white;
+                border-radius: 12px;
+                width: 90%;
+                max-width: 450px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                animation: slideUp 0.3s ease;
+                overflow: hidden;
+            }
+            
+            .error-modal-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 20px 25px;
+                background: #fff5f5;
+                border-bottom: 1px solid #ffeaea;
+            }
+            
+            .error-modal-close {
+                background: none;
+                border: none;
+                font-size: 18px;
+                color: #999;
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 50%;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+            
+            .error-modal-close:hover {
+                background: #ffeaea;
+                color: #ff4757;
+            }
+            
+            .error-modal-body {
+                padding: 25px;
+            }
+            
+            .error-modal-footer {
+                padding: 20px 25px;
+                background: #f9f9f9;
+                border-top: 1px solid #eee;
+                text-align: right;
+            }
+            
+            .error-modal-ok {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                border-radius: 8px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                font-size: 15px;
+            }
+            
+            .error-modal-ok:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            /* Responsive adjustments */
+            @media (max-width: 480px) {
+                .error-modal-content {
+                    width: 95%;
+                    margin: 10px;
+                }
+                
+                .error-modal-header,
+                .error-modal-body,
+                .error-modal-footer {
+                    padding: 15px;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+function showErrorModal(message, duration = 5000) {
+    // Remove existing error modal
+    const existingModal = document.querySelector('.error-modal-overlay');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Create modal HTML
+    const modalHTML = `
+        <div class="error-modal-overlay">
+            <div class="error-modal-content">
+                <div class="error-modal-header">
+                    <i class="fas fa-exclamation-circle" style="color: #ff4757; font-size: 24px;"></i>
+                    <h3 style="margin: 0; color: #333;">Validation Error</h3>
+                    <button class="error-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="error-modal-body">
+                    <p style="margin: 15px 0; color: #555; line-height: 1.5;">${message}</p>
+                </div>
+                <div class="error-modal-footer">
+                    <button class="error-modal-ok" onclick="this.parentElement.parentElement.parentElement.remove()">
+                        OK, I Understand
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Auto remove after duration
+    setTimeout(() => {
+        const modal = document.querySelector('.error-modal-overlay');
+        if (modal) modal.remove();
+    }, duration);
+}

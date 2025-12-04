@@ -73,60 +73,219 @@ console.log(data);
 // REGISTER
 // ============================================
 async function register() {
-    const firstName = document.querySelector("#register input[placeholder='First Name']").value.trim();
-    const lastName = document.querySelector("#register input[placeholder='Last Name']").value.trim();
-    const bDate = document.querySelector("#birthday").value.trim();
-    const gender = document.querySelector("#gender").value.trim();
-    const email = document.querySelector("#signup-email").value.trim();
-    const password = document.querySelector("#signup-password").value.trim();
-    const confirmPassword = document.querySelector("#confirm-password").value.trim();
+    try {
+        // Get form values
+        const firstName = document.querySelector("#register input[placeholder='First Name']")?.value?.trim() || '';
+        const lastName = document.querySelector("#register input[placeholder='Last Name']")?.value?.trim() || '';
+        const bDate = document.querySelector("#birthday")?.value?.trim() || '';
+        const gender = document.querySelector("#gender")?.value?.trim() || '';
+        const email = document.querySelector("#signup-email")?.value?.trim() || '';
+        const password = document.querySelector("#signup-password")?.value?.trim() || '';
+        const confirmPassword = document.querySelector("#confirm-password")?.value?.trim() || '';
 
-    // DEBUG: Check the actual date value
-    console.log("Raw birthday value:", bDate);
+        // DEBUG: Check the actual date value
+        console.log("Raw birthday value:", bDate);
 
-    // Validate date format
-    if (!isValidDate(bDate)) {
-        showTemporaryModal("Please select a valid birth date!");
-        return;
+        // ==================== VALIDATION CONSTRAINTS ====================
+
+        // 1. Check for empty fields
+        const requiredFields = [
+            { field: firstName, name: "First Name" },
+            { field: lastName, name: "Last Name" },
+            { field: email, name: "Email" },
+            { field: password, name: "Password" },
+            { field: confirmPassword, name: "Confirm Password" },
+            { field: bDate, name: "Birth Date" },
+            { field: gender, name: "Gender" }
+        ];
+
+        const emptyField = requiredFields.find(f => !f.field);
+        if (emptyField) {
+            showErrorModal(`<b>${emptyField.name}</b> is required!`);
+            return;
+        }
+
+        // 2. Name validation
+        const nameRegex = /^[A-Za-z\s]{2,50}$/;
+        if (!nameRegex.test(firstName)) {
+            showErrorModal(`<b>First Name</b> must be 2-50 letters only!`);
+            return;
+        }
+        if (!nameRegex.test(lastName)) {
+            showErrorModal(`<b>Last Name</b> must be 2-50 letters only!`);
+            return;
+        }
+
+        // 3. Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showErrorModal(`Please enter a valid email address!<br><small>Example: user@example.com</small>`);
+            return;
+        }
+        if (email.length > 100) {
+            showErrorModal(`<b>Email</b> must be less than 100 characters!`);
+            return;
+        }
+
+        // 4. Password validation
+        const passwordConstraints = [
+            { test: password.length >= 8, message: "<b>Password</b> must be at least 8 characters long!" },
+            { test: /[A-Z]/.test(password), message: "<b>Password</b> must contain at least one uppercase letter!" },
+            { test: /[a-z]/.test(password), message: "<b>Password</b> must contain at least one lowercase letter!" },
+            { test: /[0-9]/.test(password), message: "<b>Password</b> must contain at least one number!" },
+            { test: /[!@#$%^&*(),.?":{}|<>]/.test(password), message: "<b>Password</b> must contain at least one special character!" },
+            { test: password.length <= 100, message: "<b>Password</b> must be less than 100 characters!" }
+        ];
+
+        const failedPasswordConstraint = passwordConstraints.find(c => !c.test);
+        if (failedPasswordConstraint) {
+            showErrorModal(failedPasswordConstraint.message);
+            return;
+        }
+
+        // 5. Password confirmation
+        if (password !== confirmPassword) {
+            showErrorModal(`<b>Passwords do not match!</b><br>Please make sure both passwords are identical.`);
+            return;
+        }
+
+        // 6. Date validation
+        if (!isValidDate(bDate)) {
+            showErrorModal(`<b>Please select a valid birth date!</b><br>Format: YYYY-MM-DD`);
+            return;
+        }
+
+        // 7. Age validation (must be at least 13 years old)
+        const birthDate = new Date(bDate);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < 13) {
+            showErrorModal(`<b>You must be at least 13 years old to register!</b><br>Current age: ${age} years`);
+            return;
+        }
+
+        if (age > 120) {
+            showErrorModal(`<b>Please enter a valid birth date!</b>`);
+            return;
+        }
+
+        // 8. Gender validation
+        const validGenders = ['male', 'female', 'other', 'prefer-not-to-say'];
+        if (!validGenders.includes(gender.toLowerCase())) {
+            showErrorModal(`<b>Please select a valid gender option!</b>`);
+            return;
+        }
+
+        // ==================== ALL VALIDATIONS PASSED ====================
+
+        console.log("✅ All validations passed!");
+
+        // Store temporarily for after OTP verification
+        authState.tempUserData = {
+            firstName,
+            lastName,
+            email,
+            bDate,
+            gender,
+            password
+        };
+
+        console.log("Data being sent:", JSON.stringify(authState.tempUserData));
+
+        // Proceed to OTP verification
+        await sendOtp();
+
+    } catch (error) {
+        console.error("Registration error:", error);
+        showErrorModal(`<b>An unexpected error occurred!</b><br>Please try again later.`);
     }
-
-    if (!firstName || !lastName || !email || !password || !bDate || !gender || !confirmPassword) {
-        showTemporaryModal("Please fill in all fields!");
-        return;
-    }
-    if (password !== confirmPassword) {
-        showTemporaryModal("Passwords do not match!");
-        return;
-    }
-
-    // Store temporarily for after OTP verification
-    authState.tempUserData = { firstName, lastName, email, bDate, gender, password};
-    console.log("Data being sent:", JSON.stringify(authState.tempUserData));
-    await sendOtp();
 }
 
-// Add date validation function
+// ==================== HELPER FUNCTIONS ====================
+
 function isValidDate(dateString) {
-    if (!dateString) return false;
+    try {
+        // Check if date string matches YYYY-MM-DD format
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(dateString)) {
+            return false;
+        }
 
-    // Check if it's a valid YYYY-MM-DD format
-    const regex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!regex.test(dateString)) return false;
+        // Parse the date
+        const date = new Date(dateString);
+        const timestamp = date.getTime();
 
-    // Parse the date and check if it's valid
-    const date = new Date(dateString);
-    const year = date.getFullYear();
+        // Check if date is valid and not NaN
+        if (isNaN(timestamp)) {
+            return false;
+        }
 
-    // Check if year is reasonable (between 1900 and current year)
-    const currentYear = new Date().getFullYear();
-    if (year < 1900 || year > currentYear) {
-        console.log("Invalid year:", year);
+        // Check if date components match the input
+        const inputParts = dateString.split('-');
+        const year = parseInt(inputParts[0], 10);
+        const month = parseInt(inputParts[1], 10);
+        const day = parseInt(inputParts[2], 10);
+
+        // Validate date ranges
+        if (year < 1900 || year > new Date().getFullYear()) return false;
+        if (month < 1 || month > 12) return false;
+        if (day < 1 || day > 31) return false;
+
+        // Check for valid days in month (considering leap years)
+        const dateObj = new Date(year, month - 1, day);
+        return (
+            dateObj.getFullYear() === year &&
+            dateObj.getMonth() === (month - 1) &&
+            dateObj.getDate() === day
+        );
+    } catch (error) {
+        console.error("Date validation error:", error);
         return false;
     }
-
-    // Check if the date is valid
-    return !isNaN(date.getTime());
 }
+
+// Call this when your page loads
+document.addEventListener('DOMContentLoaded', function() {
+    addErrorModalStyles();
+
+    // Also add validation to password field for real-time feedback
+    const passwordField = document.querySelector('#signup-password');
+    if (passwordField) {
+        passwordField.addEventListener('input', function() {
+                validatePasswordStrength(this.value);
+        });
+    }
+});
+
+// Optional: Real-time password strength indicator
+function validatePasswordStrength(password) {
+    const strengthIndicator = document.querySelector('#password-strength');
+    if (!strengthIndicator) return;
+
+    let strength = 0;
+    let messages = [];
+
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++;
+
+    // Update UI based on strength
+    const strengthText = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][strength] || 'Very Weak';
+    const strengthColor = ['#ff4757', '#ff6348', '#ffa502', '#2ed573', '#1e90ff'][strength] || '#ff4757';
+
+    strengthIndicator.textContent = `Password Strength: ${strengthText}`;
+    strengthIndicator.style.color = strengthColor;
+}
+
+
 // ============================================
 // FORGOT PASSWORD
 // ============================================
