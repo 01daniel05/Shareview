@@ -10,7 +10,7 @@ function showConfirmModal(message, onConfirm, onCancel) {
     Object.assign(confirmModal.style, {
         position: 'fixed',
         inset: '0',
-        zIndex: '50',
+        zIndex: '99998',
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
@@ -257,7 +257,7 @@ function showLoadingModal(message) {
     Object.assign(modal.style, {
         position: 'fixed',
         inset: '0',
-        zIndex: '50',
+        zIndex: '99999',
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
         backdropFilter: 'blur(8px)',
         display: 'flex',

@@ -34,18 +34,32 @@ function deactivateMobileSearch() {
 function toggleCreatePost() {
     const form = document.getElementById('createPostForm');
     const newsFeed = document.getElementById('newsFeed');
+    const profilePage = document.getElementById('profilePage');
+    const feed = document.querySelector('.feed');
     if (!form) return;
+
     form.classList.toggle('active');
+    // Close reviewer creator if open
+    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
     if (form.classList.contains('active')) {
+        if (profilePage && profilePage.classList.contains('active')) {
+            profilePage.classList.remove('active');
+            profilePage.dataset.wasOpen = 'true';
+        }
+        feed?.classList.remove('hidden');
         form.style.display = 'block';
         if (newsFeed) newsFeed.style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
         form.style.display = 'none';
         if (newsFeed) newsFeed.style.display = 'block';
+        if (profilePage && profilePage.dataset.wasOpen === 'true') {
+            feed?.classList.add('hidden');
+            profilePage.classList.add('active');
+            delete profilePage.dataset.wasOpen;
+        }
     }
 }
-
 function toggleProfileDropdown(event) {
     if (event) {
         event.stopPropagation(); // Prevent immediate closing
@@ -79,11 +93,20 @@ function toggleRightSidebar() {
     right.classList.toggle('hidden');
 }
 
+
+function showFeed() {
+    document.querySelector('.feed')?.classList.remove('hidden');
+    document.getElementById('profilePage')?.classList.remove('active');
+    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function showProfile(event) {
     event && event.preventDefault && event.preventDefault();
 
     document.querySelector('.feed')?.classList.add('hidden');
     document.getElementById('profilePage')?.classList.add('active');
+    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden'); // Add this line
     document.getElementById('profileDropdown')?.classList.remove('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -97,12 +120,6 @@ function showProfile(event) {
         console.error('Failed to load user profile:', error);
         showTemporaryModal('Failed to load profile');
     });
-}
-
-function showFeed() {
-    document.querySelector('.feed')?.classList.remove('hidden');
-    document.getElementById('profilePage')?.classList.remove('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function openSavedPosts(event) {
@@ -139,6 +156,9 @@ function backHome(event) {
     document.querySelector('.feed')?.classList.remove('hidden');
     document.getElementById('profilePage')?.classList.remove('active');
 
+    // Close reviewer creator if open
+    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
+
     // Close any open dropdowns
     document.getElementById('profileDropdown')?.classList.remove('active');
 
@@ -158,7 +178,6 @@ function backHome(event) {
         console.error('Failed to refresh feed:', error);
     });
 }
-
 function openLikedPosts(event) {
     event.preventDefault();
 
@@ -757,7 +776,7 @@ async function submitPost() {
 
         if (response.ok && data.status === 'success') {
             // 6. Show success notification
-            showSuccessModal('Post uploaded successfully! 🎉');
+            showSuccessModal('Post uploaded successfully!');
 
             // 7. Clear form and reload
             resetPostForm();
@@ -932,7 +951,17 @@ function renderPosts(posts) {
 
     localStorage.setItem('cachedPosts', JSON.stringify(posts));
 
-    newsFeed.innerHTML = posts.map(post => `
+    newsFeed.innerHTML = posts.map(post => {
+        // Log the post data to see what files are available
+        console.log('Post data:', {
+            id: post.id,
+            title: post.title,
+            documentUrlList: post.documentUrlList,
+            imageUrlList: post.imageUrlList,
+            videoUrlList: post.videoUrlList
+        });
+
+        return `
         <article class="post-card" data-post-id="${post.id}">
             <header class="post-header">
                 <div class="post-avatar">${getUserInitials(post.user)}</div>
@@ -944,11 +973,7 @@ function renderPosts(posts) {
             </header>
 
             <div class="post-content">
-                <h3 class="post-title">${escapeHtml(post.title)}</h3>
-                <div class="post-text">${detectLinks(escapeHtml(post.content))}</div>
-                
-                <!-- Files Carousel -->
-                ${renderFilesCarousel(post)}
+                ${renderPostBody(post)}
             </div>
 
             <div class="post-stats">
@@ -971,18 +996,14 @@ function renderPosts(posts) {
                 </button>
             </div>
         </article>
-    `).join('');
+    `}).join('');
 
-    // Initialize carousels for all posts
     initializePostCarousels();
-
-    // Load post statuses
     posts.forEach(post => {
-        if (post.id) {
-            loadPostStatus(post.id);
-        }
+        if (post.id) loadPostStatus(post.id);
     });
 }
+
 
 function renderFilesCarousel(post) {
     const allFiles = [
@@ -1004,7 +1025,7 @@ function renderFilesCarousel(post) {
                     <div class="carousel-track">
                         ${allFiles.map((file, index) => `
                             <div class="carousel-slide" data-index="${index}">
-                                ${renderFileItem(file)}
+                                ${renderFileItem(file, post)}
                             </div>
                         `).join('')}
                     </div>
@@ -1099,9 +1120,25 @@ function handleVideoMaximizeKeydown(e) {
     }
 }
 
-
-
-
+function showFeedSkeleton() {
+    const newsFeed = document.getElementById('newsFeed');
+    if (!newsFeed) return;
+    newsFeed.innerHTML = `
+        <div class="post-skeleton">
+            <div class="skeleton-header">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-info">
+                    <div class="skeleton-line short"></div>
+                    <div class="skeleton-line short"></div>
+                </div>
+            </div>
+            <div class="skeleton-content">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line"></div>
+            </div>
+        </div>
+    `;
+}
 
 function closeMaximizedImage() {
     const modal = document.querySelector('.image-maximize-modal');
@@ -2039,11 +2076,7 @@ function renderPostsToContainer(container, posts) {
             </header>
 
             <div class="post-content">
-                <h3 class="post-title">${escapeHtml(post.title)}</h3>
-                <div class="post-text">${detectLinks(escapeHtml(post.content))}</div>
-                
-                <!-- Updated: Use multiple files carousel -->
-                ${renderFilesCarousel(post)}
+                ${renderPostBody(post)}
             </div>
 
             <div class="post-stats">
@@ -2078,7 +2111,6 @@ function renderPostsToContainer(container, posts) {
         }
     });
 }
-
 // ============================================
 // POST MENU FUNCTIONS
 // ============================================
@@ -2154,34 +2186,31 @@ async function editPost(event, postId) {
     closePostMenus();
 
     try {
-        // More robust way to find the post card
-        let postCard;
-
-        // Try multiple ways to find the post card
-        if (event.target.closest) {
-            postCard = event.target.closest('.post-card');
-        }
-
-        // If not found, try to find by data attribute
+        let postCard = event.target.closest('.post-card') || document.querySelector(`[data-post-id="${postId}"]`);
         if (!postCard) {
-            postCard = document.querySelector(`[data-post-id="${postId}"]`);
-        }
-
-        // If still not found, try to find the closest article
-        if (!postCard) {
-            postCard = event.target.closest('article');
-        }
-
-        if (!postCard) {
-            console.error('Post card not found for ID:', postId);
             showTemporaryModal('Could not find post data');
             return;
         }
 
-        // Get title and content from the displayed post
+        // Get the full post data from the cached posts or from the DOM
+        const cachedPosts = JSON.parse(localStorage.getItem('cachedPosts') || '[]');
+        const postData = cachedPosts.find(p => p.id === postId);
+        if (!postData) {
+            showTemporaryModal('Post data not found');
+            return;
+        }
+
+        // Check if it's a reviewer post
+        const reviewerData = parseReviewerPostContent(postData.content);
+        if (reviewerData) {
+            // ✅ Reviewer post: show modal to edit description only
+            showEditReviewerDescriptionModal(postId, reviewerData);
+            return;
+        }
+
+        // Normal post: existing logic
         const titleElement = postCard.querySelector('.post-title');
         const contentElement = postCard.querySelector('.post-text');
-
         if (!titleElement || !contentElement) {
             showTemporaryModal('Could not load post content');
             return;
@@ -2190,48 +2219,103 @@ async function editPost(event, postId) {
         const title = titleElement.textContent || '';
         const content = contentElement.textContent || '';
 
-        // Get file information if available
-        let imageUrl = null;
-        let documentUrl = null;
-        let videoUrl = null;
-
-        // Check for images
-        const imageElement = postCard.querySelector('.post-file-image');
-        if (imageElement) {
-            imageUrl = imageElement.src;
-        }
-
-        // Check for documents
-        const documentElement = postCard.querySelector('.post-file-document');
-        if (documentElement) {
-            documentUrl = 'document-attached';
-        }
-
-        // Check for videos
-        const videoElement = postCard.querySelector('.post-file-video');
-        if (videoElement) {
-            videoUrl = videoElement.src;
-        }
-
-        const postData = {
+        const post = {
             id: postId,
             title: title,
             content: content,
-            imageUrl: imageUrl,
-            documentUrl: documentUrl,
-            videoUrl: videoUrl
+            imageUrl: postCard.querySelector('.post-file-image')?.src || null,
+            documentUrl: postCard.querySelector('.post-file-document') ? 'document-attached' : null,
+            videoUrl: postCard.querySelector('.post-file-video')?.src || null
         };
-
-        console.log('Editing post data:', postData);
-        // Show edit form/modal
-        showEditPostForm(postData);
-
+        showEditPostForm(post);
     } catch (error) {
         console.error('Error loading post for editing:', error);
         showTemporaryModal('Error loading post for editing');
     }
 }
 
+function showEditReviewerDescriptionModal(postId, reviewerData) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.innerHTML = `
+        <div class="modal-content edit-post-modal">
+            <div class="modal-header">
+                <h3>Edit Reviewer Description</h3>
+                <button class="close-modal" onclick="closeEditModal()">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editReviewerDescription">Description</label>
+                    <textarea id="editReviewerDescription" rows="4">${escapeHtml(reviewerData.description || '')}</textarea>
+                    <small style="color:#999; font-size:12px;">Only the description will be updated. The reviewer content and source file remain unchanged.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="submitEditReviewerDescription(${postId})">Update Description</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+async function submitEditReviewerDescription(postId) {
+    const description = document.getElementById('editReviewerDescription').value.trim();
+
+    // Get the current post content from cache or fetch
+    const cachedPosts = JSON.parse(localStorage.getItem('cachedPosts') || '[]');
+    const post = cachedPosts.find(p => p.id === postId);
+    if (!post) {
+        showTemporaryModal('Post not found');
+        return;
+    }
+
+    const reviewerData = parseReviewerPostContent(post.content);
+    if (!reviewerData) {
+        showTemporaryModal('Invalid reviewer data');
+        return;
+    }
+
+    // Update description
+    reviewerData.description = description || null;
+
+    // Reconstruct the content with updated description
+    const content = post.content.split(REVIEWER_POST_MARKER)[0] + REVIEWER_POST_MARKER + JSON.stringify(reviewerData);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: post.title,
+                content: content,
+                userId: localStorage.getItem('userId')
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+            showTemporaryModal('Reviewer description updated!');
+            closeEditModal();
+            await loadPosts();
+            // If on profile page, refresh too
+            const profilePage = document.getElementById('profilePage');
+            if (profilePage && profilePage.classList.contains('active')) {
+                await loadProfileContent('posts');
+            }
+        } else {
+            showTemporaryModal(data.message || 'Failed to update description');
+        }
+    } catch (error) {
+        console.error('Error updating reviewer description:', error);
+        showTemporaryModal('Error updating description');
+    }
+}
 function showEditPostForm(post) {
     // Create edit form modal
     const editModal = document.createElement('div');
@@ -2601,10 +2685,11 @@ function formatFileSize(bytes) {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
+
 async function loadPosts() {
+    showFeedSkeleton();
     try {
         const response = await fetch(`${API_BASE_URL}/posts`);
-
         if (response.ok) {
             const posts = await response.json();
             renderPosts(posts);
@@ -2617,7 +2702,6 @@ async function loadPosts() {
         loadOfflinePosts();
     }
 }
-
 function loadOfflinePosts() {
     const cachedPosts = localStorage.getItem('cachedPosts');
 
@@ -2699,7 +2783,7 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     initResponsiveSidebars();
-
+    renderRecentVisitedSidebar();
     loadPosts().catch(error => {
         console.error('Failed to load posts:', error);
     });
@@ -2784,44 +2868,45 @@ function requestDownloadPermission(fileUrl, filename) {
 
 // Enhanced file item rendering with proper download handlers
 // Enhanced file item rendering with proper download handlers
-function renderFileItem(file) {
-    // Cloudinary returns full URLs, so no need to prepend API_BASE_URL
-    const fullUrl = file.url; // Already a complete Cloudinary URL
+function renderFileItem(file, post) {
+    const fullUrl = file.url;
     const filename = getFileNameFromUrl(file.url);
+    const postTitle = escapeJsString(post.title);
+    const author = escapeJsString(`${post.user.firstName} ${post.user.lastName}`);
 
     switch (file.type) {
         case 'image':
             return `
-                <div class="media-container" onclick="maximizeImage('${fullUrl}', '${filename}')">
+                <div class="media-container" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'image', '${fullUrl}'); maximizeImage('${fullUrl}', '${filename}')">
                     <img src="${fullUrl}" alt="${filename}" class="post-file-image" loading="lazy">
                 </div>
             `;
 
         case 'video':
             return `
-        <div class="media-container">
-            <video class="post-file-video" preload="metadata" 
-                   onclick="handleVideoClick(event, this)">
-                <source src="${fullUrl}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-            <div class="video-controls-overlay" onclick="maximizeVideo('${fullUrl}', '${filename}')">
-                <button class="video-play-btn">
-                    <i class='bx bx-play'></i>
-                </button>
-            </div>
-        </div>
-    `;
+                <div class="media-container">
+                    <video class="post-file-video" preload="metadata"
+                           onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); handleVideoClick(event, this)">
+                        <source src="${fullUrl}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="video-controls-overlay" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); maximizeVideo('${fullUrl}', '${filename}')">
+                        <button class="video-play-btn">
+                            <i class='bx bx-play'></i>
+                        </button>
+                    </div>
+                </div>
+            `;
 
         case 'document':
             return `
-                <div class="post-file-document" onclick="openDocumentPreview('${fullUrl}', '${filename}')">
+                <div class="post-file-document" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'document', ''); openDocumentPreview('${fullUrl}', '${filename}')">
                     <i class='bx bx-file'></i>
                     <div class="document-info">
                         <div class="document-name">${filename}</div>
                         <div class="document-type">Document</div>
                     </div>
-                    <button class="download-btn" onclick="requestDownloadPermission('${fullUrl}', '${filename}')">
+                    <button class="download-btn" onclick="event.stopPropagation(); requestDownloadPermission('${fullUrl}', '${filename}')">
                         <i class='bx bx-download'></i>
                     </button>
                 </div>
@@ -2831,7 +2916,6 @@ function renderFileItem(file) {
             return '';
     }
 }
-
 // Enhanced maximize controls with download buttons
 // Enhanced maximize controls with download buttons - FIXED
 function maximizeImage(imageUrl, filename) {
@@ -3042,75 +3126,1812 @@ function confirmDownload(fileUrl, filename) {
 }
 
 // Enhanced download execution with Cloudinary support
-function executeDownload(url, filename) {
-    showTemporaryModal('Preparing download...');
+// Using your backend endpoint with proper response handling
+async function executeDownload(url, filename) {
+    // Show loading state
+    const loadingModal = document.querySelector('.upload-progress-modal');
+    if (!loadingModal) {
+        showLoadingModal('Downloading file...');
+    }
 
-    // For Cloudinary URLs, we need to ensure proper download format
-    let downloadUrl = url;
+    try {
+        // Clean the URL
+        let cleanUrl = url;
+        if (cleanUrl.includes('cloudinary.com')) {
+            const separator = cleanUrl.includes('?') ? '&' : '?';
+            cleanUrl = `${cleanUrl}${separator}fl_attachment`;
+        }
 
-    // If it's a Cloudinary URL, we might need to add flags for download
-    if (url.includes('cloudinary.com')) {
-        // Check if it already has transformation parameters
-        if (!url.includes('/fl_attachment/')) {
-            // Add attachment flag to Cloudinary URL for proper download
-            downloadUrl = url.replace(/\/upload\//, '/upload/fl_attachment/');
+        // Build the download URL with your backend
+        const downloadUrl = `${API_BASE_URL}/api/download?url=${encodeURIComponent(cleanUrl)}&filename=${encodeURIComponent(filename)}`;
+
+        console.log('Requesting download from:', downloadUrl);
+
+        // Make the request
+        const response = await fetch(downloadUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': '*/*'
+            }
+        });
+
+        if (!response.ok) {
+            // Try to get error message from response
+            let errorMessage = `Download failed (${response.status})`;
+            try {
+                const errorData = await response.text();
+                if (errorData) {
+                    errorMessage += `: ${errorData}`;
+                }
+            } catch (e) {
+                // Ignore parsing error
+            }
+            throw new Error(errorMessage);
+        }
+
+        // Get the blob
+        const blob = await response.blob();
+
+        // Get filename from Content-Disposition header if available
+        let finalFilename = filename;
+        const contentDisposition = response.headers.get('content-disposition');
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+            if (filenameMatch && filenameMatch[1]) {
+                finalFilename = filenameMatch[1].replace(/['"]/g, '');
+            }
+        }
+
+        // Ensure proper file extension is preserved
+        if (!finalFilename.includes('.') && filename.includes('.')) {
+            const ext = filename.split('.').pop();
+            finalFilename = `${finalFilename}.${ext}`;
+        }
+
+        // Create download link
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = finalFilename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+
+        // Trigger download
+        link.click();
+
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+        }, 2000);
+
+        // Hide loading modal
+        hideLoadingModal();
+        hideUploadingModal();
+
+        showTemporaryModal(`Downloaded`);
+
+    } catch (error) {
+        console.error('Download error:', error);
+        hideLoadingModal();
+        hideUploadingModal();
+        showTemporaryModal('Download failed: ' + error.message);
+    }
+}
+
+// ✅ FIXED: Add missing fields
+let reviewerState = {
+    type: null,
+    flashcards: [],
+    quizQuestions: [],
+    style: null,
+    difficulty: null,
+    sourceFileName: null,
+    sourceFileType: null,     // ✅ Added
+    sourceFileUrl: null,      // ✅ Added - This is the Cloudinary URL
+    sourceFileData: null      // ✅ Added
+};
+
+function openReviewerCreator(event) {
+    if (event) event.preventDefault();
+
+    // Close dropdown
+    document.getElementById('profileDropdown')?.classList.remove('active');
+
+    // Hide both feed and profile page
+    document.querySelector('.feed')?.classList.add('hidden');
+    document.getElementById('profilePage')?.classList.remove('active');
+
+    // Close create post form if open
+    document.getElementById('createPostForm')?.classList.remove('active');
+
+    // Create or get reviewer container
+    let reviewerContainer = document.getElementById('reviewerCreatorContainer');
+
+    if (!reviewerContainer) {
+        reviewerContainer = document.createElement('div');
+        reviewerContainer.id = 'reviewerCreatorContainer';
+        reviewerContainer.className = 'reviewer-creator-container';
+
+        const feed = document.querySelector('.feed');
+        if (feed && feed.parentElement) {
+            feed.parentElement.appendChild(reviewerContainer);
+        } else {
+            document.body.appendChild(reviewerContainer);
         }
     }
 
-    // Create a temporary anchor element for download
-    const link = document.createElement('a');
-    link.href = downloadUrl;
+    // Show reviewer container
+    reviewerContainer.classList.remove('hidden');
+    reviewerContainer.innerHTML = `
+        <div class="reviewer-header">
+            <button class="reviewer-back-btn" onclick="closeReviewerCreator()">
+                <i class='bx bx-arrow-back'></i>
+            </button>
+            <div>
+                <h2>Create Reviewer</h2>
+                <p>Choose what type of reviewer you want to make.</p>
+            </div>
+        </div>
 
-    // Set the download attribute with the filename
-    if (filename) {
-        link.download = filename;
+        <div class="reviewer-type-grid">
+            <button class="reviewer-type-card" data-type="flashcards" onclick="selectReviewerType('flashcards')">
+                <i class='bx bx-card'></i>
+                <h3>Flashcards</h3>
+                <p>Create question and answer cards.</p>
+            </button>
+        
+            <button class="reviewer-type-card" data-type="quiz" onclick="selectReviewerType('quiz')">
+                <i class='bx bx-question-mark'></i>
+                <h3>Quiz</h3>
+                <p>Create multiple choice questions.</p>
+            </button>
+        </div>
+        <div id="reviewerFormArea"></div>
+    `;
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function closeReviewerCreator() {
+    // Hide reviewer container
+    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
+
+    // Check what was previously visible
+    const profilePage = document.getElementById('profilePage');
+    const feed = document.querySelector('.feed');
+
+    // If profile page was open, show it
+    if (profilePage && profilePage.classList.contains('active')) {
+        feed?.classList.add('hidden');
+        profilePage.classList.add('active');
     } else {
-        // Extract filename from URL if not provided
-        const urlParts = url.split('/');
-        link.download = urlParts[urlParts.length - 1];
+        // Otherwise show feed
+        feed?.classList.remove('hidden');
+    }
+}
+
+function renderFlashcardCreator() {
+    const area = document.getElementById('reviewerFormArea');
+
+    area.innerHTML = `
+        <div class="reviewer-form">
+            <div class="reviewer-form-header">
+                <h3>Flashcard Reviewer</h3>
+                <p>Create cards manually or review your auto-generated cards.</p>
+            </div>
+
+            <div class="reviewer-input-grid">
+                <input id="flashcard-question" type="text" placeholder="Question or key term">
+                <textarea id="flashcard-answer" placeholder="Answer or explanation"></textarea>
+            </div>
+
+            <button onclick="addFlashcard()" class="reviewer-primary-btn">
+                <i class='bx bx-plus'></i>
+                Add Flashcard
+            </button>
+            
+            <!-- ✅ Use startStudyFromReviewer() -->
+            <button onclick="startStudyFromReviewer()" class="reviewer-primary-btn" style="background:#16a34a;">
+                <i class='bx bx-play-circle'></i> Start Studying
+            </button>
+            
+            <div id="flashcardList" class="reviewer-list"></div>
+
+            <button onclick="saveReviewer()" class="reviewer-save-btn">
+                <i class='bx bx-save'></i>
+                Save Reviewer
+            </button>
+        </div>
+    `;
+
+    renderFlashcardList();
+}
+
+// ✅ Add this new function
+function startStudyFromReviewer() {
+    const type = reviewerState.type;
+    const items = type === 'flashcards' ? reviewerState.flashcards : reviewerState.quizQuestions;
+
+    if (!items || items.length === 0) {
+        showTemporaryModal('No items to study yet.');
+        return;
     }
 
-    link.style.display = 'none';
+    const meta = {
+        style: reviewerState.style || null,
+        difficulty: reviewerState.difficulty || null,
+        sourceFileName: reviewerState.sourceFileName || null,
+        sourceFileType: reviewerState.sourceFileType || null,
+        sourceFileUrl: reviewerState.sourceFileUrl || null  // ✅ Include the URL
+    };
 
-    // For security and better UX, we'll use _blank for downloads
-    link.target = '_blank';
+    startStudySession(type, items, { meta });
+}
 
-    // Add to DOM
-    document.body.appendChild(link);
+function addFlashcard() {
+    const question = document.getElementById('flashcard-question').value.trim();
+    const answer = document.getElementById('flashcard-answer').value.trim();
 
-    // Trigger download
-    link.click();
+    if (!question || !answer) {
+        showTemporaryModal('Please fill in both question and answer.');
+        return;
+    }
 
-    // Clean up
-    setTimeout(() => {
-        document.body.removeChild(link);
+    reviewerState.flashcards.push({ question, answer });
 
-        // Show success message
-        const successModal = document.createElement('div');
-        successModal.className = 'notification-modal success active';
-        successModal.innerHTML = `
-            <div class="notification-content">
-                <div class="notification-icon success">
-                    <i class='bx bx-check-circle'></i>
-                </div>
-                <h3 class="notification-title">Download Started!</h3>
-                <p class="notification-message">"${filename}" is being downloaded to your device.</p>
-                <button class="notification-btn" onclick="closeNotificationModal(this)">
-                    OK
-                </button>
+    document.getElementById('flashcard-question').value = '';
+    document.getElementById('flashcard-answer').value = '';
+
+    renderFlashcardList();
+}
+
+function renderFlashcardList() {
+    const list = document.getElementById('flashcardList');
+    if (!list) return;
+
+    if (reviewerState.flashcards.length === 0) {
+        list.innerHTML = `
+            <div class="reviewer-empty-state">
+                <i class='bx bx-card'></i>
+                <p>No flashcards yet.</p>
             </div>
         `;
-        document.body.appendChild(successModal);
+        return;
+    }
 
-        // Auto-close success modal after 3 seconds
-        setTimeout(() => {
-            if (successModal.parentNode) {
-                successModal.remove();
-            }
-        }, 3000);
+    list.innerHTML = reviewerState.flashcards.map((card, index) => `
+        <div class="flashcard-wrapper">
+            <div class="flashcard" onclick="this.classList.toggle('flipped')">
+                <div class="flashcard-face flashcard-front">
+                    <div class="flashcard-label">Question</div>
+                    <div class="flashcard-text">${card.question}</div>
+                    <div class="flashcard-hint">Click to reveal answer</div>
+                </div>
 
-    }, 100);
+                <div class="flashcard-face flashcard-back">
+                    <div class="flashcard-label">Answer</div>
+                    <div class="flashcard-text">${card.answer}</div>
+                    <div class="flashcard-hint">Click to hide answer</div>
+                </div>
+            </div>
+
+            <button class="flashcard-delete-btn" onclick="event.stopPropagation(); removeFlashcard(${index})">
+                <i class='bx bx-trash'></i>
+            </button>
+        </div>
+    `).join('');
 }
+function removeFlashcard(index) {
+    reviewerState.flashcards.splice(index, 1);
+    renderFlashcardList();
+}
+
+// ✅ Same fix for renderQuizCreator
+function renderQuizCreator() {
+    const area = document.getElementById('reviewerFormArea');
+
+    area.innerHTML = `
+        <div class="reviewer-form">
+            <h3>Quiz Reviewer</h3>
+
+            <input id="quiz-question" type="text" placeholder="Question">
+            <input id="quiz-option-a" type="text" placeholder="Option A">
+            <input id="quiz-option-b" type="text" placeholder="Option B">
+            <input id="quiz-option-c" type="text" placeholder="Option C">
+            <input id="quiz-option-d" type="text" placeholder="Option D">
+
+            <select id="quiz-correct-answer">
+                <option value="">Select correct answer</option>
+                <option value="A">Option A</option>
+                <option value="B">Option B</option>
+                <option value="C">Option C</option>
+                <option value="D">Option D</option>
+            </select>
+
+            <button onclick="addQuizQuestion()" class="reviewer-primary-btn">
+                Add Question
+            </button>
+            
+            <!-- ✅ Use startStudyFromReviewer() -->
+            <button onclick="startStudyFromReviewer()" class="reviewer-primary-btn" style="background:#16a34a;">
+                <i class='bx bx-play-circle'></i> Start Quiz
+            </button>
+            
+            <div id="quizQuestionList" class="reviewer-list"></div>
+
+            <button onclick="saveReviewer()" class="reviewer-save-btn">
+                Save Reviewer
+            </button>
+        </div>
+    `;
+
+    renderQuizQuestionList();
+}
+function renderQuizQuestionList() {
+    const list = document.getElementById('quizQuestionList');
+    if (!list) return;
+
+    list.innerHTML = reviewerState.quizQuestions.map((item, index) => `
+        <div class="reviewer-item">
+            <strong>${index + 1}. ${item.question}</strong>
+            <p>A. ${item.options.A}</p>
+            <p>B. ${item.options.B}</p>
+            <p>C. ${item.options.C}</p>
+            <p>D. ${item.options.D}</p>
+            <p><b>Correct:</b> ${item.correctAnswer}</p>
+            <button onclick="removeQuizQuestion(${index})">
+                <i class='bx bx-trash'></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+// ============================================
+// FIXED: SAVE REVIEWER FROM SESSION
+// ============================================
+
+// ============================================
+// FIXED: SAVE REVIEWER FROM SESSION
+// ============================================
+
+// ============================================
+// FIXED: SAVE REVIEWER FROM SESSION
+// ============================================
+
+function saveReviewerFromSession() {
+    if (!studySession) {
+        showTemporaryModal('No study session active.');
+        return;
+    }
+
+    const meta = studySession.meta || {};
+
+    showDescriptionPromptModal((description) => {
+        const userId = localStorage.getItem('userId') || 'guest';
+        const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
+
+        // ✅ Include ALL metadata including sourceFileUrl
+        saved.unshift({
+            id: Date.now(),
+            type: studySession.type,
+            items: studySession.originalItems,
+            style: meta.style || null,
+            difficulty: meta.difficulty || null,
+            sourceFileName: meta.sourceFileName || null,
+            sourceFileType: meta.sourceFileType || null,      // ✅ Added
+            sourceFileUrl: meta.sourceFileUrl || null,        // ✅ Added - CRITICAL
+            description: description || 'No description provided',
+            createdAt: new Date().toISOString()
+        });
+
+        localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
+        showTemporaryModal('Reviewer saved to your profile!');
+        closeStudySession();
+    });
+}
+
+
+function saveReviewer() {
+    if (!reviewerState.type) {
+        showTemporaryModal('Please select a reviewer type.');
+        return;
+    }
+    const items = reviewerState.type === 'flashcards' ? reviewerState.flashcards : reviewerState.quizQuestions;
+    if (items.length === 0) {
+        showTemporaryModal('Please add at least one item.');
+        return;
+    }
+
+    showDescriptionPromptModal((description) => {
+        const userId = localStorage.getItem('userId') || 'guest';
+        const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
+
+        // Create file data for storage
+        let fileData = null;
+        if (reviewerState.sourceFileData) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                fileData = {
+                    name: reviewerState.sourceFileName,
+                    type: reviewerState.sourceFileType,
+                    data: e.target.result // Store as data URL
+                };
+
+                // Save with file data
+                saveReviewerWithFileData(fileData, description);
+            };
+            reader.readAsDataURL(reviewerState.sourceFileData);
+            return; // Wait for file to be read
+        }
+
+        // No file, save directly
+        saveReviewerWithFileData(null, description);
+    });
+}
+
+function saveReviewerWithFileData(fileData, description) {
+    const userId = localStorage.getItem('userId') || 'guest';
+    const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
+
+    saved.unshift({
+        id: Date.now(),
+        type: reviewerState.type,
+        items: reviewerState.type === 'flashcards' ? reviewerState.flashcards : reviewerState.quizQuestions,
+        style: reviewerState.style || null,
+        difficulty: reviewerState.difficulty || null,
+        sourceFileName: reviewerState.sourceFileName || null,
+        sourceFileType: reviewerState.sourceFileType || null,
+        sourceFileData: fileData, // Store file as data URL
+        generatedManually: !reviewerState.sourceFileName,
+        description: description || 'No description provided',
+        createdAt: new Date().toISOString()
+    });
+    localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
+
+    showTemporaryModal('Reviewer saved successfully!');
+    reviewerState = { type: null, flashcards: [], quizQuestions: [], style: null, difficulty: null, sourceFileName: null, sourceFileType: null, sourceFileData: null };
+    closeReviewerCreator();
+}
+
+
+const REVIEWER_POST_MARKER = '__SHAREVIEW_REVIEWER__';
+
+async function shareReviewerFromSession() {
+    const type = studySession.type;
+    const items = studySession.originalItems;
+    const meta = studySession.meta || {};
+    const title = 'Reviewer';
+
+
+    showDescriptionPromptModalForShare(async (description) => {
+        const styleLabel = ({
+            definition: 'Definition Focused',
+            conceptual: 'Conceptual',
+            exam: 'Exam Style',
+            identification: 'Identification'
+        })[meta.style] || 'Conceptual';
+
+        let sourceInfo = '';
+        if (meta.sourceFileName) {
+            sourceInfo = `\nSource file: ${meta.sourceFileName}`;
+        } else {
+            sourceInfo = '\nGenerated manually';
+        }
+
+        const descriptionText = description ? `\nDescription: ${description}` : '';
+
+        const previewText = `📚 ${type === 'flashcards' ? 'Flashcard' : 'Quiz'} Reviewer (${items.length} items)
+Style: ${styleLabel}${meta.difficulty ? ' • Difficulty: ' + meta.difficulty : ''}${sourceInfo}${descriptionText}
+
+Tap "Start Studying" below to try it yourself!`;
+
+        // ✅ Include the Cloudinary URL in the payload
+        const payload = {
+            type,
+            items,
+            style: meta.style || null,
+            difficulty: meta.difficulty || null,
+            sourceFileName: meta.sourceFileName || null,
+            sourceFileType: meta.sourceFileType || null,
+            sourceFileUrl: meta.sourceFileUrl || reviewerState.sourceFileUrl || null, // ✅ THIS WAS MISSING
+            generatedManually: !meta.sourceFileName,
+            description: description || null
+        };
+
+        const content = `${previewText}\n\n${REVIEWER_POST_MARKER}${JSON.stringify(payload)}`;
+
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('content', content);
+        formData.append('userId', localStorage.getItem('userId'));
+
+        try {
+            showLoadingModal('Sharing to newsfeed...');
+            const response = await fetch(`${API_BASE_URL}/posts/multiple`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            hideLoadingModal();
+
+            if (response.ok && data.status === 'success') {
+                showTemporaryModal('Reviewer shared to your newsfeed!');
+                closeStudySession();
+                await loadPosts();
+            } else {
+                showTemporaryModal(data.message || 'Failed to share reviewer.');
+            }
+        } catch (error) {
+            hideLoadingModal();
+            console.error('Error sharing reviewer:', error);
+            showTemporaryModal('Server error while sharing reviewer.');
+        }
+    });
+}
+
+
+function showDescriptionPromptModalForShare(onConfirm) {
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal active';
+    // ✅ Force display with inline styles
+    modal.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        z-index: 99999 !important;
+        backdrop-filter: blur(4px) !important;
+    `;
+
+    modal.innerHTML = `
+        <div class="confirm-content" style="
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            position: relative;
+            z-index: 100000;
+            animation: modalSlideIn 0.3s ease;
+        ">
+            <div class="confirm-title" style="text-align:center; font-size:20px; font-weight:600; color:#1e293b; margin-bottom:8px;">
+                <i class='bx bx-share-alt' style="color:#4f46e5; font-size:24px;"></i>
+                Share Reviewer
+            </div>
+            <div class="confirm-message" style="text-align:center; color:#64748b; margin-bottom:16px;">
+                Add a description so others know what this reviewer is about.
+            </div>
+            <textarea id="shareReviewerDescriptionInput" 
+                      placeholder="e.g., Midterm reviewer for Chapter 3 - Cell Biology" 
+                      style="width:100%; min-height:80px; padding:12px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:16px; font-family:inherit; font-size:14px; resize:vertical; box-sizing:border-box;"
+                      onfocus="this.style.borderColor='#4f46e5'; this.style.boxShadow='0 0 0 3px rgba(79,70,229,0.1)'"
+                      onblur="this.style.borderColor='#e2e8f0'; this.style.boxShadow='none'"></textarea>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button class="confirm-btn confirm-cancel" onclick="this.closest('.confirm-modal').remove()" 
+                        style="padding:10px 20px; border:none; border-radius:8px; font-weight:600; cursor:pointer; background:#f1f5f9; color:#64748b; transition:all 0.2s;"
+                        onmouseover="this.style.background='#e2e8f0'"
+                        onmouseout="this.style.background='#f1f5f9'">
+                    Cancel
+                </button>
+                <button class="confirm-btn confirm-ok" id="confirmShareReviewerBtn" 
+                        style="padding:10px 24px; border:none; border-radius:8px; font-weight:600; cursor:pointer; background:#4f46e5; color:white; transition:all 0.2s; display:flex; align-items:center; gap:6px;"
+                        onmouseover="this.style.background='#4338ca'"
+                        onmouseout="this.style.background='#4f46e5'">
+                    <i class='bx bx-share-alt'></i> Share
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Auto-focus the textarea
+    const textarea = modal.querySelector('#shareReviewerDescriptionInput');
+    if (textarea) {
+        setTimeout(() => textarea.focus(), 100);
+    }
+
+    // Handle Enter key to submit
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            modal.querySelector('#confirmShareReviewerBtn').click();
+        }
+    });
+
+    modal.querySelector('#confirmShareReviewerBtn').onclick = () => {
+        const description = document.getElementById('shareReviewerDescriptionInput').value.trim();
+        modal.remove();
+        onConfirm(description);
+    };
+}
+
+window._reviewerPostsCache = window._reviewerPostsCache || {};
+
+function parseReviewerPostContent(content) {
+    if (!content || !content.includes(REVIEWER_POST_MARKER)) return null;
+    try {
+        const idx = content.indexOf(REVIEWER_POST_MARKER);
+        const jsonStr = content.substring(idx + REVIEWER_POST_MARKER.length);
+        return JSON.parse(jsonStr);
+    } catch (e) {
+        console.error('Failed to parse reviewer post payload:', e);
+        return null;
+    }
+}
+
+function renderPostBody(post) {
+    const reviewerData = parseReviewerPostContent(post.content);
+
+    if (reviewerData) {
+        window._reviewerPostsCache[post.id] = reviewerData;
+
+        // ✅ First check: Is the URL in the payload?
+        let sourceFileUrl = reviewerData.sourceFileUrl || null;
+
+        console.log('🔍 Looking for file URL for post', post.id);
+        console.log('  - From payload:', sourceFileUrl);
+
+        // ✅ Second check: Try to find in attachments
+        if (!sourceFileUrl) {
+            const allFiles = [
+                ...(post.documentUrlList || []),
+                ...(post.imageUrlList || []),
+                ...(post.videoUrlList || [])
+            ];
+
+            if (reviewerData.sourceFileName && allFiles.length > 0) {
+                for (const url of allFiles) {
+                    const filename = getFileNameFromUrl(url);
+                    if (filename === reviewerData.sourceFileName) {
+                        sourceFileUrl = url;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // ✅ Store the URL for download
+        if (sourceFileUrl) {
+            reviewerData.sourceFileUrl = sourceFileUrl;
+            window._reviewerPostsCache[post.id].sourceFileUrl = sourceFileUrl;
+            console.log('✅ Found source file URL:', sourceFileUrl);
+        }
+
+        const styleLabel = ({
+            definition: 'Definition Focused',
+            conceptual: 'Conceptual',
+            exam: 'Exam Style',
+            identification: 'Identification'
+        })[reviewerData.style] || 'Conceptual';
+        const typeLabel = reviewerData.type === 'flashcards' ? 'Flashcards' : 'Quiz';
+        const typeIcon = reviewerData.type === 'flashcards' ? 'bx-card' : 'bx-question-mark';
+
+        // Determine source info display with download button
+        let sourceDisplay = '';
+        if (reviewerData.sourceFileName) {
+            const hasFileUrl = !!sourceFileUrl;
+            sourceDisplay = `
+                <span class="reviewer-tag source-tag" style="background:#6b7280; padding:6px 12px; border-radius:20px; font-size:13px; display:inline-flex; align-items:center; gap:8px; color:white;">
+                    ${escapeHtml(reviewerData.sourceFileName)}
+                    <button onclick="event.stopPropagation(); downloadSourceFile(${post.id})" 
+                            style="background:${hasFileUrl ? 'white' : '#ef4444'}; border:none; border-radius:6px; padding:4px 10px; cursor:${hasFileUrl ? 'pointer' : 'default'}; font-size:12px; color:${hasFileUrl ? '#4f46e5' : 'white'}; font-weight:600; transition:all 0.2s; white-space:nowrap;" 
+                            ${hasFileUrl ? `onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='white'"` : ''}>
+                        ${hasFileUrl ? 'Download' : 'File unavailable'}
+                    </button>
+                </span>
+            `;
+        } else {
+            sourceDisplay = `
+                <span class="reviewer-tag manual-tag" style="background:#8b5cf6; padding:6px 14px; border-radius:20px; font-size:13px; color:white; display:inline-block;">
+                    Generated Manually
+                </span>
+            `;
+        }
+
+        return `
+            <h3 class="post-title">${escapeHtml(post.title)}</h3>
+            <div class="reviewer-item" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #e2e8f0; transition: all 0.3s ease;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #4f46e5; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink:0;">
+                        <i class='bx ${typeIcon}'></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; color: #1e293b; font-size: 16px;">${typeLabel} Reviewer</div>
+                        <div style="color: #64748b; font-size: 13px;">${reviewerData.items.length} items</div>
+                    </div>
+                </div>
+                
+                ${reviewerData.description ? `
+                    <div style="color: #475569; font-size: 14px; margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px; border-left: 3px solid #4f46e5;">
+                        ${escapeHtml(reviewerData.description)}
+                    </div>
+                ` : ''}
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center;">
+                    <span class="reviewer-tag" style="background:#4f46e5; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; display:inline-block;">${styleLabel}</span>
+                    ${reviewerData.difficulty ? `<span class="reviewer-tag" style="background:#f59e0b; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; display:inline-block;">${escapeHtml(reviewerData.difficulty)}</span>` : ''}
+                    ${sourceDisplay}
+                </div>
+                
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button onclick="startStudyFromPost(${post.id})" style="flex:1; padding: 10px 16px; background: #4f46e5; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; min-width:120px;">
+                        <i class='bx bx-play-circle'></i> Study
+                    </button>
+                </div>
+            </div>
+            ${renderFilesCarousel(post)}
+        `;
+        return `
+            <!-- ✅ Remove the title display -->
+            <div class="reviewer-item" ...>
+                ...
+            </div>
+            ${renderFilesCarousel(post)}
+        `;
+    }
+
+    return `
+        <h3 class="post-title">${escapeHtml(post.title)}</h3>
+        <div class="post-text">${detectLinks(escapeHtml(post.content))}</div>
+        ${renderFilesCarousel(post)}
+    `;
+}
+
+
+function startStudyFromPost(postId) {
+    const reviewerData = window._reviewerPostsCache[postId];
+    if (!reviewerData) {
+        showTemporaryModal('Could not load this reviewer.');
+        return;
+    }
+
+    // Pass the source file data if available
+    const meta = {
+        style: reviewerData.style,
+        difficulty: reviewerData.difficulty,
+        sourceFileName: reviewerData.sourceFileName,
+        sourceFileType: reviewerData.sourceFileType,
+        sourceFileData: reviewerData.sourceFileData,
+        description: reviewerData.description
+    };
+
+    startStudySession(reviewerData.type, reviewerData.items, { meta });
+}
+
+function addQuizQuestion() {
+    const question = document.getElementById('quiz-question').value.trim();
+    const optionA = document.getElementById('quiz-option-a').value.trim();
+    const optionB = document.getElementById('quiz-option-b').value.trim();
+    const optionC = document.getElementById('quiz-option-c').value.trim();
+    const optionD = document.getElementById('quiz-option-d').value.trim();
+    const correctAnswer = document.getElementById('quiz-correct-answer').value;
+
+    if (!question || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
+        showTemporaryModal('Please complete all quiz fields.');
+        return;
+    }
+
+    reviewerState.quizQuestions.push({
+        question,
+        options: { A: optionA, B: optionB, C: optionC, D: optionD },
+        correctAnswer
+    });
+
+    renderQuizCreator();
+}
+
+function removeQuizQuestion(index) {
+    reviewerState.quizQuestions.splice(index, 1);
+    renderQuizQuestionList();
+}
+
+let uploadedReviewerText = "";
+
+function selectReviewerType(type) {
+    reviewerState.type = type;
+
+    document.querySelectorAll('.reviewer-type-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+
+    const selectedCard = document.querySelector(`.reviewer-type-card[data-type="${type}"]`);
+    if (selectedCard) {
+        selectedCard.classList.add('selected');
+    }
+
+    renderReviewerUploadStep(type);
+}
+
+function renderReviewerUploadStep(type) {
+    const area = document.getElementById('reviewerFormArea');
+    const label = type === 'flashcards' ? 'Flashcards' : 'Quiz';
+
+    const fileDisplay = reviewerState.sourceFileName ? `
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:#f1f5f9; border-radius:8px; margin-top:8px;">
+            <i class='bx bx-file' style="color:#4f46e5;"></i>
+            <span style="font-weight:500;">${escapeHtml(reviewerState.sourceFileName)}</span>
+            <span style="font-size:12px; color:#64748b;">(${(reviewerState.sourceFileData?.size / 1024).toFixed(1)} KB)</span>
+            <button onclick="clearUploadedFile()" style="margin-left:auto; background:none; border:none; color:#ef4444; cursor:pointer; font-size:18px;">
+                <i class='bx bx-x'></i>
+            </button>
+        </div>
+    ` : '';
+
+    area.innerHTML = `
+        <div class="reviewer-form">
+            <div class="reviewer-form-header">
+                <h3>Auto Create ${label}</h3>
+                <p>Upload notes or paste text, then let AI create your reviewer.</p>
+            </div>
+
+            <input 
+                id="reviewer-file-upload" 
+                type="file" 
+                accept=".txt,.pdf,.docx"
+                onchange="handleReviewerFileUpload(event)"
+            >
+
+            ${fileDisplay}
+
+            <textarea 
+                id="reviewer-source-text" 
+                placeholder="Paste your reviewer notes here, or upload a .txt, .pdf, or .docx file..."
+            >${uploadedReviewerText || ''}</textarea>
+
+            <select id="reviewer-difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+
+            <input 
+                id="reviewer-count" 
+                type="number" 
+                min="5" 
+                max="50" 
+                value="10"
+                placeholder="Number of items"
+            >
+
+            <select id="reviewer-style">
+                <option value="definition">Definition focused</option>
+                <option value="conceptual" selected>Conceptual</option>
+                <option value="exam">Exam style</option>
+                <option value="identification">Identification</option>
+            </select>
+
+            <button onclick="autoGenerateReviewer()" class="reviewer-primary-btn">
+                <i class='bx bx-sparkles'></i>
+                Auto Generate ${label}
+            </button>
+
+            <button onclick="${type === 'flashcards' ? 'renderFlashcardCreator()' : 'renderQuizCreator()'}" class="reviewer-save-btn">
+                Create Manually
+            </button>
+        </div>
+    `;
+}
+
+function clearUploadedFile() {
+    reviewerState.sourceFileName = null;
+    reviewerState.sourceFileType = null;
+    reviewerState.sourceFileData = null;
+    uploadedReviewerText = "";
+    document.getElementById('reviewer-source-text').value = "";
+    document.getElementById('reviewer-file-upload').value = "";
+    renderReviewerUploadStep(reviewerState.type);
+}
+async function handleReviewerFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Store basic file info
+    reviewerState.sourceFileName = file.name;
+    reviewerState.sourceFileType = file.type;
+    reviewerState.sourceFileData = file;
+
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith('.txt')) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedReviewerText = e.target.result;
+            document.getElementById('reviewer-source-text').value = uploadedReviewerText;
+            showTemporaryModal('Text file uploaded successfully!');
+        };
+        reader.readAsText(file);
+        return;
+    }
+
+    if (fileName.endsWith('.pdf') || fileName.endsWith('.docx')) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        showLoadingModal('Uploading file...');
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/reviewer/extract-text`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            hideLoadingModal();
+
+            if (response.ok && data.status === 'success') {
+                // ✅ CRITICAL: Store the Cloudinary URL
+                reviewerState.sourceFileUrl = data.fileUrl;
+                reviewerState.sourceFileName = data.fileName || file.name;
+                reviewerState.sourceFileType = data.fileType || file.type;
+
+                uploadedReviewerText = data.text || '';
+                document.getElementById('reviewer-source-text').value = uploadedReviewerText;
+
+                console.log('✅ File uploaded to Cloudinary:', reviewerState.sourceFileUrl);
+                showTemporaryModal('File uploaded successfully!');
+            } else {
+                showTemporaryModal(data.message || 'Failed to extract text.');
+            }
+        } catch (error) {
+            hideLoadingModal();
+            console.error('File extraction error:', error);
+            showTemporaryModal('Server error while reading file.');
+        }
+        return;
+    }
+
+    showTemporaryModal('Please upload a .txt, .pdf, or .docx file.');
+}
+
+async function autoGenerateReviewer() {
+    const sourceText = document.getElementById('reviewer-source-text').value.trim();
+    const difficulty = document.getElementById('reviewer-difficulty')?.value || 'medium';
+    const count = Number(document.getElementById('reviewer-count')?.value || 10);
+    const style = document.getElementById('reviewer-style')?.value || 'conceptual';
+
+    if (!sourceText) {
+        showTemporaryModal('Please upload or paste reviewer content first.');
+        return;
+    }
+    if (!reviewerState.type) {
+        showTemporaryModal('Please select reviewer type first.');
+        return;
+    }
+
+    reviewerState.style = style;
+    reviewerState.difficulty = difficulty;
+
+    showLoadingModal('Creating reviewer with AI...');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/reviewer/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                type: reviewerState.type,
+                sourceText,
+                difficulty,
+                count,
+                style,
+                // ✅ Pass the Cloudinary URL
+                sourceFileUrl: reviewerState.sourceFileUrl,
+                sourceFileName: reviewerState.sourceFileName,
+                sourceFileType: reviewerState.sourceFileType
+            })
+        });
+
+        const data = await response.json();
+        hideLoadingModal();
+
+        if (!response.ok || data.status !== 'success') {
+            showTemporaryModal(data.message || 'Failed to generate reviewer.');
+            return;
+        }
+
+        if (reviewerState.type === 'flashcards') {
+            reviewerState.flashcards = data.items;
+            renderFlashcardCreator();
+            showTemporaryModal('Flashcards generated!');
+        } else if (reviewerState.type === 'quiz') {
+            reviewerState.quizQuestions = data.items;
+            renderQuizCreator();
+            showTemporaryModal('Quiz generated!');
+        }
+    } catch (error) {
+        hideLoadingModal();
+        console.error('AI reviewer generation error:', error);
+        showTemporaryModal('Server error while generating reviewer.');
+    }
+}
+
+function generateFlashcardsFromText(text) {
+    const sentences = splitTextIntoSentences(text);
+    const flashcards = [];
+
+    sentences.forEach(sentence => {
+        const cleanSentence = sentence.trim();
+
+        if (cleanSentence.length < 25) return;
+
+        if (cleanSentence.includes(' is ')) {
+            const parts = cleanSentence.split(' is ');
+            const term = parts[0].trim();
+            const definition = parts.slice(1).join(' is ').trim();
+
+            if (term && definition) {
+                flashcards.push({
+                    question: `What is ${term}?`,
+                    answer: definition
+                });
+            }
+        } else if (cleanSentence.includes(' are ')) {
+            const parts = cleanSentence.split(' are ');
+            const term = parts[0].trim();
+            const definition = parts.slice(1).join(' are ').trim();
+
+            flashcards.push({
+                question: `What are ${term}?`,
+                answer: definition
+            });
+        } else {
+            flashcards.push({
+                question: `Explain: ${cleanSentence.substring(0, 60)}...`,
+                answer: cleanSentence
+            });
+        }
+    });
+
+    return flashcards.slice(0, 20);
+}
+
+function generateQuizFromText(text) {
+    const sentences = splitTextIntoSentences(text).filter(sentence => sentence.length >= 30);
+    const quizQuestions = [];
+
+    sentences.forEach((sentence, index) => {
+        const cleanSentence = sentence.trim();
+        const words = cleanSentence.split(' ').filter(word => word.length > 4);
+
+        if (words.length < 4) return;
+
+        const answer = words[Math.floor(words.length / 2)]
+            .replace(/[^\w]/g, '');
+
+        if (!answer) return;
+
+        const questionText = cleanSentence.replace(answer, '_____');
+
+        const wrongAnswers = getRandomWrongAnswers(sentences, answer);
+
+        quizQuestions.push({
+            question: `Complete the statement: ${questionText}`,
+            options: {
+                A: answer,
+                B: wrongAnswers[0] || 'None of the above',
+                C: wrongAnswers[1] || 'All of the above',
+                D: wrongAnswers[2] || 'Not related'
+            },
+            correctAnswer: 'A'
+        });
+    });
+
+    return quizQuestions.slice(0, 15);
+}
+
+function splitTextIntoSentences(text) {
+    return text
+        .replace(/\n+/g, ' ')
+        .split(/[.!?]+/)
+        .map(sentence => sentence.trim())
+        .filter(sentence => sentence.length > 0);
+}
+
+function getRandomWrongAnswers(sentences, correctAnswer) {
+    const words = sentences
+        .join(' ')
+        .split(' ')
+        .map(word => word.replace(/[^\w]/g, ''))
+        .filter(word => word.length > 4 && word.toLowerCase() !== correctAnswer.toLowerCase());
+
+    return [...new Set(words)]
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+}
+
+// ============================================
+// RECENTLY VISITED POSTS (Right Sidebar)
+// ============================================
+
+function escapeJsString(str) {
+    return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function recordRecentVisit(postId, title, author, type, thumbnailUrl) {
+    let recent = JSON.parse(localStorage.getItem('recentlyVisitedPosts') || '[]');
+
+    // Remove any existing entry for this post so it moves to the top
+    recent = recent.filter(item => item.postId !== postId);
+
+    recent.unshift({
+        postId,
+        title,
+        author,
+        type, // 'image' | 'video' | 'document'
+        thumbnailUrl,
+        visitedAt: new Date().toISOString()
+    });
+
+    recent = recent.slice(0, 10); // keep the 10 most recent
+    localStorage.setItem('recentlyVisitedPosts', JSON.stringify(recent));
+    renderRecentVisitedSidebar();
+}
+
+function removeRecentVisit(event, postId) {
+    event.stopPropagation();
+    let recent = JSON.parse(localStorage.getItem('recentlyVisitedPosts') || '[]');
+    recent = recent.filter(item => item.postId !== postId);
+    localStorage.setItem('recentlyVisitedPosts', JSON.stringify(recent));
+    renderRecentVisitedSidebar();
+}
+
+function goToPost(postId) {
+    const postCard = document.querySelector(`[data-post-id="${postId}"]`);
+    if (postCard) {
+        postCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        postCard.style.transition = 'box-shadow 0.3s';
+        postCard.style.boxShadow = '0 0 0 3px rgba(102,126,234,0.4)';
+        setTimeout(() => { postCard.style.boxShadow = ''; }, 1500);
+    } else {
+        showTemporaryModal('That post isn\'t currently loaded — try scrolling the feed or reloading it.');
+    }
+}
+
+function renderRecentVisitedSidebar() {
+    const container = document.getElementById('recentPostsCard');
+    if (!container) return;
+
+    const recent = JSON.parse(localStorage.getItem('recentlyVisitedPosts') || '[]');
+
+    if (recent.length === 0) {
+        container.innerHTML = `
+            <div class="sidebar-header"><div class="section-title">Recent Posts Visited</div></div>
+            <div class="empty-state">
+                <i class='bx bx-history'></i>
+                <div class="empty-state-text">No posts visited yet</div>
+                <div class="empty-state-subtext">Files you open will show up here</div>
+            </div>
+        `;
+        return;
+    }
+
+    const iconForType = { image: 'bx-image', video: 'bx-video', document: 'bx-file' };
+
+    container.innerHTML = `
+        <div class="sidebar-header"><div class="section-title">Recent Posts Visited</div></div>
+        ${recent.map(item => `
+            <div class="recent-post-item" onclick="goToPost(${item.postId})">
+                <button class="remove-post-btn" onclick="removeRecentVisit(event, ${item.postId})">
+                    <i class='bx bx-x'></i>
+                </button>
+                ${item.type === 'image' && item.thumbnailUrl
+        ? `<img src="${item.thumbnailUrl}" class="recent-post-thumb" style="object-fit:cover;" alt="">`
+        : `<div class="recent-post-thumb"><i class='bx ${iconForType[item.type] || 'bx-file'}'></i></div>`
+    }
+                <div class="recent-post-info">
+                    <div class="recent-post-title">${escapeHtml(item.title)}</div>
+                    <div class="recent-post-author">By ${escapeHtml(item.author)}</div>
+                    <div class="recent-post-time">Visited ${formatTime(item.visitedAt)}</div>
+                </div>
+            </div>
+        `).join('')}
+    `;
+}
+
+// ============================================
+// STUDY SESSION (Stacked Flashcards & Quiz)
+// ============================================
+
+let studySession = null;
+
+function startStudySession(type, items, options = {}) {
+    const { resetOriginal = true, meta = null } = options;
+    if (!items || items.length === 0) {
+        showTemporaryModal('No items to study yet.');
+        return;
+    }
+
+    // ✅ Preserve the URL
+    let preservedMeta = meta || {};
+
+    // If meta doesn't have the URL, get it from reviewerState
+    if (!preservedMeta.sourceFileUrl && reviewerState.sourceFileUrl) {
+        preservedMeta.sourceFileUrl = reviewerState.sourceFileUrl;
+        preservedMeta.sourceFileName = reviewerState.sourceFileName;
+        preservedMeta.sourceFileType = reviewerState.sourceFileType;
+    }
+
+    studySession = {
+        type,
+        originalItems: resetOriginal ? items.slice() : (studySession ? studySession.originalItems : items.slice()),
+        items: items.slice(),
+        index: 0,
+        results: [],
+        flipped: false,
+        selectedOption: null,
+        locked: false,
+        meta: preservedMeta  // ✅ Contains the URL
+    };
+    openStudyModal();
+    renderStudyCard();
+}
+
+function openStudyModal() {
+    if (document.getElementById('studySessionModal')) return;
+    const modal = document.createElement('div');
+    modal.id = 'studySessionModal';
+    modal.className = 'study-session-modal active';
+    modal.innerHTML = `
+        <div class="study-session-content">
+            <div class="study-header">
+                <div class="study-progress" id="studyProgressText"></div>
+                <button class="study-close-btn" onclick="closeStudySession()"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="study-stack" id="studyStack"></div>
+            <div class="study-controls" id="studyControls"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function closeStudySession() {
+    document.getElementById('studySessionModal')?.remove();
+    studySession = null;
+}
+
+function updateStudyProgress() {
+    const el = document.getElementById('studyProgressText');
+    if (!el || !studySession) return;
+    el.textContent = `Card ${Math.min(studySession.index + 1, studySession.items.length)} / ${studySession.items.length}`;
+}
+
+function renderStudyCard() {
+    if (!studySession) return;
+    updateStudyProgress();
+    if (studySession.index >= studySession.items.length) {
+        renderStudySummary();
+        return;
+    }
+    const item = studySession.items[studySession.index];
+    studySession.type === 'flashcards' ? renderFlashcardStudyCard(item) : renderQuizStudyCard(item);
+}
+
+// ---- FLASHCARDS ----
+function renderFlashcardStudyCard(item) {
+    studySession.flipped = false;
+    document.getElementById('studyStack').innerHTML = `
+        <div class="study-ghost-card g2"></div>
+        <div class="study-ghost-card g1"></div>
+        <div class="study-active-card" id="flashcardStudyFace" onclick="flipStudyFlashcard()">
+            <div class="study-label">Question</div>
+            <div class="study-text">${escapeHtml(item.question)}</div>
+            <div class="study-hint">Tap to reveal answer</div>
+        </div>
+    `;
+    document.getElementById('studyControls').innerHTML = `
+        <div class="study-controls-row">
+            <button class="study-btn nav-btn" onclick="studyGoBack()" ${studySession.index === 0 ? 'disabled' : ''}><i class='bx bx-left-arrow-alt'></i> Back</button>
+            <button class="study-btn skip-btn" onclick="studySkip()"><i class='bx bx-skip-next'></i> Skip</button>
+        </div>
+    `;
+}
+
+function flipStudyFlashcard() {
+    if (!studySession) return;
+    studySession.flipped = !studySession.flipped;
+    const item = studySession.items[studySession.index];
+    const face = document.getElementById('flashcardStudyFace');
+
+    if (studySession.flipped) {
+        face.classList.add('answer-face');
+        face.innerHTML = `
+            <div class="study-label answer">Answer</div>
+            <div class="study-text">${escapeHtml(item.answer)}</div>
+            <div class="study-hint">Did you get it right?</div>
+        `;
+        document.getElementById('studyControls').innerHTML = `
+            <div class="study-controls-row">
+                <button class="study-btn correct-btn" onclick="studyAnswer(true)"><i class='bx bx-check'></i> Got it right</button>
+                <button class="study-btn wrong-btn" onclick="studyAnswer(false)"><i class='bx bx-x'></i> Got it wrong</button>
+            </div>
+            <div class="study-controls-row">
+                <button class="study-btn nav-btn" onclick="studyGoBack()" ${studySession.index === 0 ? 'disabled' : ''}><i class='bx bx-left-arrow-alt'></i> Back</button>
+                <button class="study-btn skip-btn" onclick="studySkip()"><i class='bx bx-skip-next'></i> Skip</button>
+            </div>
+        `;
+    } else {
+        face.classList.remove('answer-face');
+        face.innerHTML = `
+            <div class="study-label">Question</div>
+            <div class="study-text">${escapeHtml(item.question)}</div>
+            <div class="study-hint">Tap to reveal answer</div>
+        `;
+    }
+}
+
+// ---- QUIZ ----
+function renderQuizStudyCard(item) {
+    studySession.selectedOption = null;
+    studySession.locked = false;
+    document.getElementById('studyStack').innerHTML = `
+        <div class="study-ghost-card g2"></div>
+        <div class="study-ghost-card g1"></div>
+        <div class="study-active-card" style="cursor:default;">
+            <div class="study-label">Question</div>
+            <div class="study-text">${escapeHtml(item.question)}</div>
+            <div class="quiz-options">
+                ${['A','B','C','D'].map(letter => `
+                    <button class="quiz-option-btn" data-letter="${letter}" onclick="selectQuizOption('${letter}')">
+                        ${letter}. ${escapeHtml(item.options[letter])}
+                    </button>
+                `).join('')}
+            </div>
+            <div id="quizExplanationSlot"></div>
+        </div>
+    `;
+    document.getElementById('studyControls').innerHTML = `
+        <div class="study-controls-row">
+            <button class="study-btn nav-btn" onclick="studyGoBack()" ${studySession.index === 0 ? 'disabled' : ''}><i class='bx bx-left-arrow-alt'></i> Back</button>
+            <button class="study-btn skip-btn" onclick="studySkip()"><i class='bx bx-skip-next'></i> Skip</button>
+        </div>
+    `;
+}
+function selectQuizOption(letter) {
+    if (!studySession || studySession.locked) return;
+    const item = studySession.items[studySession.index];
+    studySession.selectedOption = letter;
+    studySession.locked = true;
+
+    document.querySelectorAll('.quiz-option-btn').forEach(btn => {
+        btn.disabled = true;
+        const btnLetter = btn.dataset.letter;
+        if (btnLetter === item.correctAnswer) btn.classList.add('correct-answer');
+        else if (btnLetter === letter) btn.classList.add('wrong-answer');
+        if (btnLetter === letter) btn.classList.add('selected');
+    });
+
+    // Reveal explanation if the AI provided one
+    const explanationSlot = document.getElementById('quizExplanationSlot');
+    if (explanationSlot && item.explanation) {
+        explanationSlot.innerHTML = `
+            <div class="quiz-explanation">
+                <i class='bx bx-bulb'></i>
+                <span>${escapeHtml(item.explanation)}</span>
+            </div>
+        `;
+    }
+
+    const isCorrect = letter === item.correctAnswer;
+    document.getElementById('studyControls').innerHTML = `
+        <div class="study-controls-row">
+            <button class="study-btn ${isCorrect ? 'correct-btn' : 'wrong-btn'}" onclick="studyAnswer(${isCorrect})">
+                <i class='bx bx-arrow-to-right'></i> ${isCorrect ? 'Correct! Continue' : 'Continue'}
+            </button>
+        </div>
+        <div class="study-controls-row">
+            <button class="study-btn nav-btn" onclick="studyGoBack()" ${studySession.index === 0 ? 'disabled' : ''}><i class='bx bx-left-arrow-alt'></i> Back</button>
+        </div>
+    `;
+}
+// ---- SHARED NAV ----
+function studyAnswer(isCorrect) {
+    studySession.results.push({ item: studySession.items[studySession.index], status: isCorrect ? 'correct' : 'wrong' });
+    studySession.index++;
+    renderStudyCard();
+}
+
+function studySkip() {
+    studySession.results.push({ item: studySession.items[studySession.index], status: 'skipped' });
+    studySession.index++;
+    renderStudyCard();
+}
+
+function studyGoBack() {
+    if (studySession.index === 0) return;
+    studySession.index--;
+    studySession.results.pop();
+    renderStudyCard();
+}
+
+function renderStudySummary() {
+    const correct = studySession.results.filter(r => r.status === 'correct').length;
+    const wrong = studySession.results.filter(r => r.status === 'wrong').length;
+    const skipped = studySession.results.filter(r => r.status === 'skipped').length;
+    const total = studySession.results.length;
+    const pct = total ? Math.round((correct / total) * 100) : 0;
+
+    document.getElementById('studyStack').innerHTML = `
+        <div class="study-summary">
+            <i class='bx bx-trophy' style="font-size:48px;color:#4f46e5;"></i>
+            <div class="study-summary-score">${pct}%</div>
+            <div class="study-summary-sub">${correct} correct • ${wrong} wrong • ${skipped} skipped (of ${total})</div>
+            <div class="study-summary-list">
+                ${studySession.results.map(r => `
+                    <div class="study-summary-item ${r.status === 'correct' ? 'correct' : r.status === 'wrong' ? 'wrong' : ''}">
+                        <span>${escapeHtml(r.item.question)}</span>
+                        <strong>${r.status.toUpperCase()}</strong>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    const hasWrong = wrong > 0 || skipped > 0;
+    document.getElementById('studyControls').innerHTML = `
+        <div class="study-summary-actions">
+            <button class="study-btn nav-btn" onclick="restartStudySession()"> Start Over</button>
+            <button class="study-btn skip-btn" onclick="retryWrongOnly()" ${hasWrong ? '' : 'disabled'}>Retry Wrong Only</button>
+            <button class="study-btn nav-btn full-width" onclick="saveReviewerFromSession()"></i> Save to Profile</button>
+            <button class="study-btn correct-btn full-width" onclick="shareReviewerFromSession()"> Share to Newsfeed</button>
+            <button class="study-btn wrong-btn full-width" onclick="closeStudySession()"> Close</button>
+        </div>
+    `;
+}
+
+function restartStudySession() {
+    startStudySession(studySession.type, studySession.originalItems, {
+        resetOriginal: true,
+        meta: studySession.meta
+    });
+}
+
+function retryWrongOnly() {
+    const wrongItems = studySession.results.filter(r => r.status !== 'correct').map(r => r.item);
+    startStudySession(studySession.type, wrongItems, {
+        resetOriginal: false,
+        meta: studySession.meta
+    });
+}
+
+function openMyReviewers() {
+    const userId = localStorage.getItem('userId') || 'guest';
+    window._savedReviewersCache = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
+    const list = window._savedReviewersCache;
+    const styleLabel = (s) => ({
+        definition: 'Definition Focused',
+        conceptual: 'Conceptual',
+        exam: 'Exam Style',
+        identification: 'Identification'
+    })[s] || 'Conceptual';
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.innerHTML = `
+        <div class="modal-content" style="width:90%;max-width:700px;max-height:80vh;overflow-y:auto;padding:0;">
+            <div class="modal-header" style="padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:white;z-index:10;border-radius:12px 12px 0 0;">
+                <h3 style="margin:0;font-size:20px;color:#1e293b;">My Saved Reviewers</h3>
+                <button class="close-modal" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#94a3b8;">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+            <div class="modal-body" style="padding:20px 24px;">
+                ${list.length === 0
+        ? `<div class="empty-state" style="text-align:center;padding:40px 0;">
+                        <i class='bx bx-book-bookmark' style="font-size:48px;color:#cbd5e1;"></i>
+                        <div class="empty-state-text" style="font-size:16px;color:#64748b;margin-top:12px;">No saved reviewers yet</div>
+                        <div class="empty-state-subtext" style="font-size:14px;color:#94a3b8;margin-top:4px;">Create and save reviewers to see them here</div>
+                    </div>`
+        : list.map(r => {
+            // Determine source display with download button
+            let sourceDisplay = '';
+            if (r.sourceFileName) {
+                sourceDisplay = `
+                                <span class="reviewer-tag source-tag" style="background:#6b7280; padding:6px 12px; border-radius:20px; font-size:13px; display:inline-flex; align-items:center; gap:8px; color:white;">
+                                    ${escapeHtml(r.sourceFileName)}
+                                    <button onclick="downloadSavedReviewerFile(${r.id})" 
+                                            style="background:white; border:none; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:12px; color:#4f46e5; font-weight:600; transition:all 0.2s; white-space:nowrap;" 
+                                            onmouseover="this.style.background='#e0e7ff'" 
+                                            onmouseout="this.style.background='white'">
+                                        Download
+                                    </button>
+                                </span>
+                            `;
+            } else {
+                sourceDisplay = `
+                                <span class="reviewer-tag manual-tag" style="background:#8b5cf6; padding:6px 14px; border-radius:20px; font-size:13px; color:white; display:inline-block;">
+                                    Generated Manually
+                                </span>
+                            `;
+            }
+
+            const typeIcon = r.type === 'flashcards' ? 'bx-card' : 'bx-question-mark';
+            const typeLabel = r.type === 'flashcards' ? 'Flashcards' : 'Quiz';
+
+            return `
+                            <div class="reviewer-item" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #e2e8f0; transition: all 0.3s ease;">
+                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #4f46e5; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink:0;">
+                                        <i class='bx ${typeIcon}'></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; color: #1e293b; font-size: 16px;">${typeLabel} Reviewer</div>
+                                        <div style="color: #64748b; font-size: 13px;">${r.items.length} items</div>
+                                    </div>
+                                </div>
+                                
+                                <div style="color: #475569; font-size: 14px; margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px; border-left: 3px solid #4f46e5;">
+                                    ${escapeHtml(r.description || 'No description provided')}
+                                </div>
+                                
+                                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center;">
+                                    <span class="reviewer-tag" style="background:#4f46e5; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; display:inline-block;">${styleLabel(r.style)}</span>
+                                    ${r.difficulty ? `<span class="reviewer-tag" style="background:#f59e0b; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; display:inline-block;">${escapeHtml(r.difficulty)}</span>` : ''}
+                                    ${sourceDisplay}
+                                </div>
+                                
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <button onclick="studyFromSaved(${r.id})" style="flex:1; padding: 10px 16px; background: #4f46e5; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; min-width:120px;">
+                                        <i class='bx bx-play-circle'></i> Study
+                                    </button>
+                                    <button onclick="editSavedReviewerDescription(${r.id})" style="padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <i class='bx bx-edit'></i> Edit
+                                    </button>
+                                    <button onclick="deleteSavedReviewer(${r.id})" style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <i class='bx bx-trash'></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+        }).join('')
+    }
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+function editSavedReviewerDescription(id) {
+    const userId = localStorage.getItem('userId') || 'guest';
+    const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
+    const reviewer = saved.find(r => r.id === id);
+    if (!reviewer) {
+        showTemporaryModal('Reviewer not found.');
+        return;
+    }
+
+    // Show modal to edit description
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.innerHTML = `
+        <div class="modal-content edit-post-modal" style="max-width:500px;">
+            <div class="modal-header">
+                <h3>Edit Reviewer Description</h3>
+                <button class="close-modal" onclick="this.closest('.modal-overlay').remove()">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="editSavedReviewerDescription">Description</label>
+                    <textarea id="editSavedReviewerDescription" rows="4">${escapeHtml(reviewer.description || '')}</textarea>
+                    <small style="color:#999; font-size:12px;">Only the description will be updated. The reviewer content and source file remain unchanged.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                <button type="button" class="btn-primary" onclick="updateSavedReviewerDescription(${id})">Update Description</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function updateSavedReviewerDescription(id) {
+    const description = document.getElementById('editSavedReviewerDescription').value.trim();
+    const userId = localStorage.getItem('userId') || 'guest';
+    let saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
+    const index = saved.findIndex(r => r.id === id);
+    if (index === -1) {
+        showTemporaryModal('Reviewer not found.');
+        return;
+    }
+
+    // Update description
+    saved[index].description = description || 'No description provided';
+
+    localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
+    showTemporaryModal('Reviewer description updated!');
+
+    // Close the modal
+    const modal = document.querySelector('.modal-overlay.active');
+    if (modal) modal.remove();
+
+    // Refresh the "My Reviewers" modal
+    openMyReviewers();
+}
+function downloadSavedReviewerFile(id) {
+    const userId = localStorage.getItem('userId') || 'guest';
+    const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
+    const reviewer = saved.find(r => r.id === id);
+
+    if (!reviewer || !reviewer.sourceFileName) {
+        showTemporaryModal('No source file available for this reviewer.');
+        return;
+    }
+
+    // ✅ First check: Use the stored sourceFileUrl
+    if (reviewer.sourceFileUrl) {
+        requestDownloadPermission(reviewer.sourceFileUrl, reviewer.sourceFileName);
+        return;
+    }
+
+    // ✅ Second check: Try to find it in cached posts
+    const cachedPosts = JSON.parse(localStorage.getItem('cachedPosts') || '[]');
+    let fileUrl = null;
+
+    // Check if we have the file data
+    if (reviewer.sourceFileData) {
+        // If we have the file data stored
+        try {
+            // If it's stored as a data URL or object
+            if (reviewer.sourceFileData.data) {
+                const link = document.createElement('a');
+                link.href = reviewer.sourceFileData.data;
+                link.download = reviewer.sourceFileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                return;
+            }
+        } catch (error) {
+            console.error('Error downloading file:', error);
+        }
+    }
+
+    for (const post of cachedPosts) {
+        // Check document URLs
+        if (post.documentUrlList) {
+            for (const url of post.documentUrlList) {
+                const filename = getFileNameFromUrl(url);
+                if (filename === reviewer.sourceFileName) {
+                    fileUrl = url;
+                    break;
+                }
+            }
+        }
+
+        // Check image URLs
+        if (!fileUrl && post.imageUrlList) {
+            for (const url of post.imageUrlList) {
+                const filename = getFileNameFromUrl(url);
+                if (filename === reviewer.sourceFileName) {
+                    fileUrl = url;
+                    break;
+                }
+            }
+        }
+
+        // Check video URLs
+        if (!fileUrl && post.videoUrlList) {
+            for (const url of post.videoUrlList) {
+                const filename = getFileNameFromUrl(url);
+                if (filename === reviewer.sourceFileName) {
+                    fileUrl = url;
+                    break;
+                }
+            }
+        }
+
+        if (fileUrl) break;
+    }
+
+    if (fileUrl) {
+        requestDownloadPermission(fileUrl, reviewer.sourceFileName);
+    } else {
+        showTemporaryModal('Source file not found. It may have been removed.');
+    }
+}
+
+function studyFromSaved(id) {
+    const r = (window._savedReviewersCache || []).find(x => x.id === id);
+    if (!r) return;
+    document.querySelector('.modal-overlay.active')?.remove();
+
+    // ✅ Pass ALL metadata including sourceFileUrl
+    startStudySession(r.type, r.items, {
+        meta: {
+            style: r.style,
+            difficulty: r.difficulty,
+            sourceFileName: r.sourceFileName,
+            sourceFileType: r.sourceFileType,
+            sourceFileUrl: r.sourceFileUrl || null,  // ✅ Include URL
+            description: r.description
+        }
+    });
+}
+
+function deleteSavedReviewer(id) {
+    const userId = localStorage.getItem('userId') || 'guest';
+    let saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
+    saved = saved.filter(r => r.id !== id);
+    localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
+    document.querySelector('.modal-overlay.active')?.remove();
+    openMyReviewers();
+}
+
+document.getElementById('scrollToTopBtn')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+window.addEventListener('scroll', () => {
+    document.getElementById('scrollToTopBtn')?.classList.toggle('visible', window.scrollY > 300);
+});
+
+function showDescriptionPromptModal(onConfirm) {
+    const modal = document.createElement('div');
+    modal.className = 'confirm-modal active';
+    modal.innerHTML = `
+        <div class="confirm-content" style="text-align:left;">
+            <div class="confirm-title" style="text-align:center;">Save Reviewer</div>
+            <div class="confirm-message" style="text-align:center;">Add a short description so you can find it later.</div>
+            <textarea id="reviewerDescriptionInput" placeholder="e.g. Midterm reviewer for Chapter 3 - Cell Biology" style="width:100%; min-height:80px; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:16px; font-family:inherit;"></textarea>
+            <div class="confirm-buttons">
+                <button class="confirm-btn confirm-cancel" onclick="this.closest('.confirm-modal').remove()">Cancel</button>
+                <button class="confirm-btn confirm-ok" style="background:#16a34a;" id="confirmSaveReviewerBtn">Save</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('#confirmSaveReviewerBtn').onclick = () => {
+        const description = document.getElementById('reviewerDescriptionInput').value.trim();
+        modal.remove();
+        onConfirm(description);
+    };
+}
+
+function downloadSourceFile(postId) {
+    const reviewerData = window._reviewerPostsCache[postId];
+    if (!reviewerData || !reviewerData.sourceFileName) {
+        showTemporaryModal('No source file available for this reviewer.');
+        return;
+    }
+
+    console.log(`=== Downloading source file for post ${postId} ===`);
+    console.log('Reviewer data:', reviewerData);
+
+    // Check if we have the URL stored
+    if (reviewerData.sourceFileUrl) {
+        requestDownloadPermission(reviewerData.sourceFileUrl, reviewerData.sourceFileName);
+        return;
+    }
+
+    // If not stored, try to find in cached posts
+    const cachedPosts = JSON.parse(localStorage.getItem('cachedPosts') || '[]');
+    const post = cachedPosts.find(p => p.id === postId);
+
+    if (post) {
+        const allFiles = [
+            ...(post.documentUrlList || []),
+            ...(post.imageUrlList || []),
+            ...(post.videoUrlList || [])
+        ];
+
+        for (const url of allFiles) {
+            const filename = getFileNameFromUrl(url);
+            if (filename === reviewerData.sourceFileName ||
+                filename.includes(reviewerData.sourceFileName.replace(/\.[^.]+$/, ''))) {
+                requestDownloadPermission(url, reviewerData.sourceFileName);
+                return;
+            }
+        }
+    }
+
+    // If still not found
+    showTemporaryModal('Source file not found. It may have been removed.');
+}
+
+
 // ============================================
 // EXPORT FUNCTIONS FOR HTML
 // ============================================
@@ -3149,3 +4970,31 @@ window.scrollPostCarousel = scrollPostCarousel;
 window.goToSlide = goToSlide;
 window.scrollPreviewCarousel = scrollPreviewCarousel;
 window.updatePreviewCarouselControls = updatePreviewCarouselControls;
+window.openReviewerCreator = openReviewerCreator;
+window.closeReviewerCreator = closeReviewerCreator;
+window.selectReviewerType = selectReviewerType;
+window.addFlashcard = addFlashcard;
+window.removeFlashcard = removeFlashcard;
+window.addQuizQuestion = addQuizQuestion;
+window.removeQuizQuestion = removeQuizQuestion;
+window.saveReviewer = saveReviewer;
+window.handleReviewerFileUpload = handleReviewerFileUpload;
+window.autoGenerateReviewer = autoGenerateReviewer;
+window.renderFlashcardCreator = renderFlashcardCreator;
+window.renderQuizCreator = renderQuizCreator;
+window.selectReviewerType = selectReviewerType;
+window.openReviewerCreator = openReviewerCreator;
+window.closeReviewerCreator = closeReviewerCreator;
+window.selectReviewerType = selectReviewerType;
+window.renderFlashcardCreator = renderFlashcardCreator;
+window.renderQuizCreator = renderQuizCreator;
+window.addFlashcard = addFlashcard;
+window.removeFlashcard = removeFlashcard;
+window.addQuizQuestion = addQuizQuestion;
+window.removeQuizQuestion = removeQuizQuestion;
+window.saveReviewer = saveReviewer;
+window.handleReviewerFileUpload = handleReviewerFileUpload;
+window.autoGenerateReviewer = autoGenerateReviewer;
+window.recordRecentVisit = recordRecentVisit;
+window.removeRecentVisit = removeRecentVisit;
+window.goToPost = goToPost;

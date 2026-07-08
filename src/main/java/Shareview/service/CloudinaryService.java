@@ -28,31 +28,31 @@ public class CloudinaryService {
             return null;
         }
 
-        // Determine resource type based on folder
         String resourceType = getResourceType(folder);
+        String originalFilename = file.getOriginalFilename(); // e.g. "report.docx"
 
-        // Upload options
         Map<String, Object> uploadParams = ObjectUtils.asMap(
-            "folder", "shareview/" + folder,
-            "resource_type", resourceType,
-            "use_filename", true,
-            "unique_filename", true
+                "folder", "shareview/" + folder,
+                "resource_type", resourceType,
+                "use_filename", true,
+                "unique_filename", true
         );
 
-        // Add specific options for different file types
+        // CRITICAL: byte[] uploads have no filename Cloudinary can detect on its own.
+        // filename_override tells it explicitly what to base use_filename on.
+        if (originalFilename != null && !originalFilename.isBlank()) {
+            uploadParams.put("filename_override", originalFilename);
+        }
+
         if ("image".equals(resourceType)) {
-            // Optimize images
             uploadParams.put("quality", "auto");
             uploadParams.put("fetch_format", "auto");
         } else if ("video".equals(resourceType)) {
-            // Video optimization
             uploadParams.put("quality", "auto");
         }
 
-        // Upload to Cloudinary
         Map uploadResult = cloudinary.uploader().upload(file.getBytes(), uploadParams);
 
-        // Return the secure URL
         return (String) uploadResult.get("secure_url");
     }
 

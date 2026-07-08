@@ -21,19 +21,19 @@ public class EmailService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final OTPRepository otpRepository;
-    private final SendGridEmailService sendGridEmailService;
+    private final GmailEmailService gmailEmailService;
 
-    @Value("${app.email.from:shareview682@gmail.com}")
+    @Value("${app.email.from}")
     private String fromEmail;
 
-    @Value("${app.email.sender-name:Shareview}")
+    @Value("${app.email.sender-name}")
     private String senderName;
 
     @Autowired
     public EmailService(OTPRepository otpRepository,
-                        SendGridEmailService sendGridEmailService) {
+                        GmailEmailService gmailEmailService) {
         this.otpRepository = otpRepository;
-        this.sendGridEmailService = sendGridEmailService;
+        this.gmailEmailService = gmailEmailService;
         logConfiguration();
     }
 
@@ -73,13 +73,13 @@ public class EmailService {
             logger.info("OTP saved to database");
 
             // Send email via SendGrid Web API
-            logger.info("Attempting to send via SendGrid...");
-            sendGridEmailService.sendOTP(email, otp);
+            logger.info("Attempting to send via Mailjet...");
+            gmailEmailService.sendOTP(email, otp);
 
-            logger.info("✅ OTP sent successfully to: {}", email);
+            logger.info("OTP sent successfully to: {}", email);
 
         } catch (Exception e) {
-            logger.error("❌ Failed to process OTP request: {}", e.getMessage(), e);
+            logger.error("Failed to process OTP request: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to send OTP email", e);
         } finally {
             logger.info("=== SENDING OTP END ===");
@@ -150,6 +150,6 @@ public class EmailService {
      * Test email sending
      */
     public boolean sendTestEmail(String toEmail) {
-        return sendGridEmailService.sendTestEmail(toEmail);
+        return gmailEmailService.sendTestEmail(toEmail);
     }
 }

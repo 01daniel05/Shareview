@@ -176,7 +176,7 @@ async function register() {
         }
 
         // 8. Gender validation
-        const validGenders = ['male', 'female', 'other', 'prefer-not-to-say'];
+        const validGenders = ['male', 'female', 'custom'];
         if (!validGenders.includes(gender.toLowerCase())) {
             showErrorModal(`<b>Please select a valid gender option!</b>`);
             return;

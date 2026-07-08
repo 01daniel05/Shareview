@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shareview - Main Feed</title>
+    <link rel="icon" type="images/ShareviewLogo" href="/images/ShareviewLogo.png"
+          style="border-radius: 50%; width:100px; height:100px ; object-fit:cover ">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link href="/css/main-feed.css" rel="stylesheet">
     <link href="/css/comment-section.css" rel="stylesheet">
@@ -15,7 +17,7 @@
         <i class='bx bx-menu'></i>
     </button>
 
-    <div class="logo">Shareview</div>
+    <div class="logo" onclick="backHome()">Shareview</div>
 
     <div class="nav-center">
         <div class="search-box">
@@ -42,6 +44,11 @@
                 <a href="#" class="dropdown-item" onclick="showProfile(event)">
                     <i class='bx bx-user'></i><span>My Profile</span>
                 </a>
+
+                <a href="#" class="dropdown-item" onclick="openReviewerCreator(event)">
+                    <i class='bx bx-book-add'></i><span>Create Reviewer</span>
+                </a>
+
                 <a href="#" class="dropdown-item">
                     <i class='bx bx-cog'></i><span>Settings</span>
                 </a>
@@ -62,9 +69,9 @@
     <!-- Left Sidebar -->
     <aside class="left-sidebar" id="leftSidebar">
         <div class="sidebar-card user-profile-card">
-            <div class="user-avatar">JD</div>
-            <div class="user-name">John Doe</div>
-            <div class="user-email">john.doe@email.com</div>
+            <div class="user-avatar">Loading...</div>
+            <div class="user-name">Loading...</div>
+            <div class="user-email">Loading...</div>
         </div>
 
         <div class="sidebar-card">
@@ -143,35 +150,34 @@
 
         <!-- News Feed -->
         <div id="newsFeed">
-
-            <!-- Post Card 1 -->
-            <article class="post-card">
-                <header class="post-header">
-                    <div class="post-avatar">AS</div>
-                    <div class="post-info">
-                        <div class="post-author">Alice Smith</div>
-                        <div class="post-time">2 hours ago</div>
+            <div class="post-skeleton">
+                <div class="skeleton-header">
+                    <div class="skeleton-avatar"></div>
+                    <div class="skeleton-info">
+                        <div class="skeleton-line short"></div>
+                        <div class="skeleton-line short"></div>
                     </div>
-                    <i class='bx bx-dots-horizontal-rounded post-menu'></i>
-                </header>
-
-                <div class="post-content">
-                    <h3 class="post-title">Advanced Calculus Study Guide</h3>
-                    <p class="post-text">Here's a comprehensive study guide for Advanced Calculus! Covers differentiation, integration, and series. Hope this helps everyone preparing for finals! 📚✨</p>
-                    <img src="https://via.placeholder.com/600x350/e0e0e0/666666?text=Study+Guide" alt="Study Guide" class="post-image">
                 </div>
-
-                <div class="post-stats"><span><i class='bx bx-like'></i> 45 Likes</span><span><i class='bx bx-comment'></i>12 Comments</span></div>
-
-                <div class="post-actions">
-                    <button class="post-action-btn"><i class='bx bx-like'></i> Like</button>
-                    <button class="post-action-btn"><i class='bx bx-comment'></i> Comment</button>
-                    <button class="post-action-btn"><i class='bx bx-share-alt'></i> Share</button>
-                    <button class="post-action-btn"><i class='bx bx-bookmark'></i> Save</button>
+                <div class="skeleton-content">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-media"></div>
                 </div>
-            </article>
-
-        </div> <!-- end #newsFeed -->
+            </div>
+            <div class="post-skeleton">
+                <div class="skeleton-header">
+                    <div class="skeleton-avatar"></div>
+                    <div class="skeleton-info">
+                        <div class="skeleton-line short"></div>
+                        <div class="skeleton-line short"></div>
+                    </div>
+                </div>
+                <div class="skeleton-content">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line"></div>
+                </div>
+            </div>
+        </div><!-- end #newsFeed -->
     </main>
 
     <!-- Profile Page (hidden by default) -->
@@ -183,12 +189,15 @@
             <div class="profile-info-section">
                 <div class="profile-main-avatar">JD</div>
                 <div class="profile-actions">
+                    <button class="profile-edit-btn" onclick="openMyReviewers()" style="background:#667eea;">
+                        <i class='bx bx-book-bookmark'></i> My Reviewers
+                    </button>
                     <button class="profile-edit-btn"><i class='bx bx-edit-alt'></i> Edit Profile</button>
                 </div>
                 <div class="profile-details">
-                    <div class="profile-name">John Doe</div>
-                    <div class="profile-username">@johndoe • john.doe@email.com</div>
-                    <div class="profile-bio">Passionate learner and knowledge sharer. Love discussing mathematics, programming, and science. Always looking to collaborate and learn from others!</div>
+                    <div class="profile-name"></div>
+                    <div class="profile-username"></div>
+                    <div class="profile-bio"></div>
                 </div>
 
                 <div class="profile-stats">
@@ -238,63 +247,14 @@
 
     <!-- Right Sidebar -->
     <aside class="right-sidebar" id="rightSidebar" aria-hidden="false">
-        <div class="recent-posts-card">
+        <div class="recent-posts-card" id="recentPostsCard">
             <div class="sidebar-header"><div class="section-title">Recent Posts Visited</div></div>
-
-            <div class="recent-post-item">
-                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
-                <div class="recent-post-thumb">📚</div>
-                <div class="recent-post-info">
-                    <div class="recent-post-title">Data Structures Cheat Sheet</div>
-                    <div class="recent-post-author">By Sarah Chen</div>
-                    <div class="recent-post-time">Visited 10 min ago</div>
-                </div>
-            </div>
-
-            <div class="recent-post-item">
-                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
-                <div class="recent-post-thumb">💻</div>
-                <div class="recent-post-info">
-                    <div class="recent-post-title">Python Basics Tutorial</div>
-                    <div class="recent-post-author">By David Lee</div>
-                    <div class="recent-post-time">Visited 30 min ago</div>
-                </div>
-            </div>
-
-            <div class="recent-post-item">
-                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
-                <div class="recent-post-thumb">🧪</div>
-                <div class="recent-post-info">
-                    <div class="recent-post-title">Organic Chemistry Notes</div>
-                    <div class="recent-post-author">By Emma Wilson</div>
-                    <div class="recent-post-time">Visited 1 hour ago</div>
-                </div>
-            </div>
-
-            <div class="recent-post-item">
-                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
-                <div class="recent-post-thumb">📐</div>
-                <div class="recent-post-info">
-                    <div class="recent-post-title">Geometry Formulas Guide</div>
-                    <div class="recent-post-author">By Mark Taylor</div>
-                    <div class="recent-post-time">Visited 2 hours ago</div>
-                </div>
-            </div>
-
-            <div class="recent-post-item">
-                <button class="remove-post-btn" onclick="removeRecentPost(event, this)"><i class='bx bx-x'></i></button>
-                <div class="recent-post-thumb">🌍</div>
-                <div class="recent-post-info">
-                    <div class="recent-post-title">World History Timeline</div>
-                    <div class="recent-post-author">By Lisa Brown</div>
-                    <div class="recent-post-time">Visited yesterday</div>
-                </div>
-            </div>
-
-        </div>
-    </aside>
+            <!-- Populated dynamically by renderRecentVisitedSidebar() -->
+        </div>    </aside>
 </div> <!-- end .container -->
-
+<button id="scrollToTopBtn" class="scroll-to-top-btn" title="Back to top">
+    <i class='bx bx-up-arrow-alt'></i>
+</button>
 <!-- JavaScript -->
 <script src="/js/main-feed.js"></script>
 <script src="/js/modal.js"></script>
