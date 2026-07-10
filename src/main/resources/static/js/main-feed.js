@@ -1,20 +1,21 @@
+// ============================================
+// API BASE URL
+// ============================================
 
 let API_BASE_URL;
 
 if (window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1') {
-    // Local development
     API_BASE_URL = 'http://localhost:8080';
     console.log(' Running in LOCAL mode');
 } else if (window.location.hostname.includes('railway.app')) {
-    // Production on Render
-    API_BASE_URL = 'https://shareview-production.up.railway.app'; // ← CHANGE TO YOUR ACTUAL BACKEND URL
+    API_BASE_URL = 'https://shareview-production.up.railway.app';
     console.log(' Running in PRODUCTION mode');
 } else {
-    // Fallback
-    API_BASE_URL = 'https://shareview-vovf.onrender.com';
+    API_BASE_URL = 'https://shareview-1.onrender.com';
     console.log(' Using fallback URL');
 }
+
 // ============================================
 // UI TOGGLE FUNCTIONS
 // ============================================
@@ -39,7 +40,6 @@ function toggleCreatePost() {
     if (!form) return;
 
     form.classList.toggle('active');
-    // Close reviewer creator if open
     document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
     if (form.classList.contains('active')) {
         if (profilePage && profilePage.classList.contains('active')) {
@@ -60,21 +60,18 @@ function toggleCreatePost() {
         }
     }
 }
+
 function toggleProfileDropdown(event) {
     if (event) {
-        event.stopPropagation(); // Prevent immediate closing
+        event.stopPropagation();
     }
     const dropdown = document.getElementById('profileDropdown');
     if (!dropdown) {
         console.error('Profile dropdown element not found');
         return;
     }
-
-    // Toggle the active class
     const isActive = dropdown.classList.toggle('active');
     console.log('Dropdown toggled:', isActive);
-
-    // Optional: Add visual feedback to the profile pic
     const profilePic = event ? event.currentTarget : document.querySelector('.profile-pic');
     if (profilePic) {
         profilePic.classList.toggle('active', isActive);
@@ -93,7 +90,6 @@ function toggleRightSidebar() {
     right.classList.toggle('hidden');
 }
 
-
 function showFeed() {
     document.querySelector('.feed')?.classList.remove('hidden');
     document.getElementById('profilePage')?.classList.remove('active');
@@ -103,14 +99,11 @@ function showFeed() {
 
 function showProfile(event) {
     event && event.preventDefault && event.preventDefault();
-
     document.querySelector('.feed')?.classList.add('hidden');
     document.getElementById('profilePage')?.classList.add('active');
-    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden'); // Add this line
+    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
     document.getElementById('profileDropdown')?.classList.remove('active');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    // Load user profile and automatically load posts
     loadUserProfile().then(() => {
         loadProfileContent('posts').catch(error => {
             console.error('Failed to load user posts:', error);
@@ -124,18 +117,12 @@ function showProfile(event) {
 
 function openSavedPosts(event) {
     event.preventDefault();
-
-    // 1. Open Profile Page
     showProfile(event);
-
-    // 2. After the page loads, activate the Saved tab and scroll to it
     setTimeout(() => {
         const savedTabBtn = document.querySelector('.profile-tab[data-tab="saved"]')
-            || document.querySelector('.profile-tab:nth-child(2)'); // fallback
+            || document.querySelector('.profile-tab:nth-child(2)');
         if (savedTabBtn) {
             savedTabBtn.click();
-
-            // Scroll to the saved content section
             setTimeout(() => {
                 const savedContent = document.getElementById('savedContent');
                 if (savedContent) {
@@ -151,47 +138,30 @@ function openSavedPosts(event) {
 
 function backHome(event) {
     if (event) event.preventDefault();
-
-    // Close profile page if open
     document.querySelector('.feed')?.classList.remove('hidden');
     document.getElementById('profilePage')?.classList.remove('active');
-
-    // Close reviewer creator if open
     document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
-
-    // Close any open dropdowns
     document.getElementById('profileDropdown')?.classList.remove('active');
-
-    // Update active menu item
     document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
     const homeMenuItem = document.querySelector('.menu-item[data-tab="newsFeed"]');
     if (homeMenuItem) {
         homeMenuItem.classList.add('active');
     }
-
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    // Refresh the posts
     loadPosts().then(() => {
     }).catch(error => {
         console.error('Failed to refresh feed:', error);
     });
 }
+
 function openLikedPosts(event) {
     event.preventDefault();
-
-    // 1. Open Profile Page
     showProfile(event);
-
-    // 2. After the page loads, activate the Liked tab and scroll to it
     setTimeout(() => {
         const likedTabBtn = document.querySelector('.profile-tab[data-tab="liked"]')
-            || document.querySelector('.profile-tab:nth-child(3)'); // fallback
+            || document.querySelector('.profile-tab:nth-child(3)');
         if (likedTabBtn) {
             likedTabBtn.click();
-
-            // Scroll to the liked content section
             setTimeout(() => {
                 const likedContent = document.getElementById('likedContent');
                 if (likedContent) {
@@ -206,20 +176,15 @@ function openLikedPosts(event) {
 }
 
 function switchProfileTab(e, tabName) {
-    // Update tab active states
     document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.profile-content').forEach(c => c.classList.remove('active'));
     e.currentTarget.classList.add('active');
-
-    // Map tab names to content IDs
     const map = { 'posts': 'postsContent', 'saved': 'savedContent', 'liked': 'likedContent' };
     const id = map[tabName];
     if (id) {
         const contentElement = document.getElementById(id);
         if (contentElement) {
             contentElement.classList.add('active');
-
-            // Show loading state
             contentElement.innerHTML = `
                 <div class="empty-state">
                     <i class='bx bx-loader-alt bx-spin'></i>
@@ -228,8 +193,6 @@ function switchProfileTab(e, tabName) {
             `;
         }
     }
-
-    // Load the content with a small delay to ensure UI is updated
     setTimeout(() => {
         loadProfileContent(tabName).catch(error => {
             console.error('Failed to load profile content:', error);
@@ -249,39 +212,32 @@ function removeRecentPost(event, button) {
 }
 
 // ============================================
-// POST MANAGEMENT FUNCTIONS
+// POST MANAGEMENT – FILE UPLOAD & COMPRESSION
 // ============================================
 
-// Enhanced state management for multiple files
 let selectedFiles = {
     images: [],
     documents: [],
     videos: []
 };
 
-// Updated file size limits (in bytes)
 const FILE_LIMITS = {
-    IMAGE: 5 * 1024 * 1024, // 5MB per image
-    DOCUMENT: 10 * 1024 * 1024, // 10MB per document
-    VIDEO: 50 * 1024 * 1024, // 50MB per video
-    TOTAL: 100 * 1024 * 1024 // 100MB total per post
+    IMAGE: 5 * 1024 * 1024,
+    DOCUMENT: 10 * 1024 * 1024,
+    VIDEO: 50 * 1024 * 1024,
+    TOTAL: 100 * 1024 * 1024
 };
 
-// Compression settings
 const COMPRESSION_SETTINGS = {
     IMAGE: { maxWidth: 1200, quality: 0.7 },
-    VIDEO: { maxWidth: 1280, maxBitrate: 2000000 } // 2Mbps
+    VIDEO: { maxWidth: 1280, maxBitrate: 2000000 }
 };
-
-// ============================================
-// ENHANCED FILE UPLOAD HANDLERS WITH SIZE VALIDATION
-// ============================================
 
 function handleImageUpload() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.multiple = true; // Allow multiple selection
+    input.multiple = true;
     input.onchange = async (e) => {
         const files = Array.from(e.target.files);
         for (const file of files) {
@@ -322,34 +278,22 @@ function handleVideoUpload() {
     input.click();
 }
 
-// File size validation
 function validateFileSize(file, type) {
     const maxSize = FILE_LIMITS[type.toUpperCase()];
     if (file.size > maxSize) {
         showTemporaryModal(`${file.name} is too large (max ${maxSize / 1024 / 1024}MB)`);
         return false;
     }
-
-    // Check total size
     const totalSize = calculateTotalFileSize() + file.size;
     if (totalSize > FILE_LIMITS.TOTAL) {
         showTemporaryModal(`Total files would exceed 100MB limit. Current: ${(calculateTotalFileSize() / 1024 / 1024).toFixed(1)}MB`);
         return false;
     }
-
     return true;
 }
 
-// ============================================
-// ENHANCED FILE PREVIEW WITH CAROUSEL LAYOUT
-// ============================================
-// ============================================
-// ENHANCED FILE PREVIEW WITH CAROUSEL LAYOUT
-// ============================================
-
 function showFilePreview(type, file, compressionInfo = null) {
     let previewContainer = document.querySelector('.file-preview-container');
-
     if (!previewContainer) {
         previewContainer = document.createElement('div');
         previewContainer.className = 'file-preview-container';
@@ -372,14 +316,12 @@ function showFilePreview(type, file, compressionInfo = null) {
         const mediaUpload = document.querySelector('.media-upload');
         mediaUpload.after(previewContainer);
     }
-
     const previewsInner = previewContainer.querySelector('.file-previews-inner');
     const previewId = `preview-${type}-${Date.now()}`;
     const preview = document.createElement('div');
     preview.id = previewId;
     preview.className = 'file-preview-item';
     preview.dataset.filename = file.name;
-
     if (type === 'image') {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -443,14 +385,11 @@ function showFilePreview(type, file, compressionInfo = null) {
     }
 }
 
-// Carousel scroll functionality
 function scrollPreviewCarousel(direction) {
     const scrollContainer = document.querySelector('.file-previews-scroll');
     if (!scrollContainer) return;
-
-    const scrollAmount = 180; // Width of one item + gap
+    const scrollAmount = 180;
     scrollContainer.scrollLeft += direction * scrollAmount;
-
     setTimeout(() => {
         updatePreviewCarouselControls();
     }, 100);
@@ -460,12 +399,8 @@ function updatePreviewCarouselControls() {
     const scrollContainer = document.querySelector('.file-previews-scroll');
     const prevBtn = document.querySelector('.preview-carousel-btn.prev-btn');
     const nextBtn = document.querySelector('.preview-carousel-btn.next-btn');
-
     if (!scrollContainer || !prevBtn || !nextBtn) return;
-
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainer;
-
-    // Show/hide buttons based on scroll position
     if (scrollLeft <= 10) {
         prevBtn.style.opacity = '0';
         prevBtn.style.pointerEvents = 'none';
@@ -473,7 +408,6 @@ function updatePreviewCarouselControls() {
         prevBtn.style.opacity = '1';
         prevBtn.style.pointerEvents = 'auto';
     }
-
     if (scrollLeft >= scrollWidth - clientWidth - 10) {
         nextBtn.style.opacity = '0';
         nextBtn.style.pointerEvents = 'none';
@@ -482,9 +416,8 @@ function updatePreviewCarouselControls() {
         nextBtn.style.pointerEvents = 'auto';
     }
 }
-// Update the removeFile function to work with the new structure
+
 function removeFile(type, filename) {
-    // Remove from selected files
     if (type === 'image') {
         selectedFiles.images = selectedFiles.images.filter(item => item.file.name !== filename);
     } else if (type === 'document') {
@@ -492,20 +425,15 @@ function removeFile(type, filename) {
     } else if (type === 'video') {
         selectedFiles.videos = selectedFiles.videos.filter(item => item.file.name !== filename);
     }
-
-    // Remove preview element
     const preview = document.querySelector(`[data-filename="${filename}"]`);
     if (preview) {
         preview.style.transition = 'opacity 0.3s, transform 0.3s';
         preview.style.opacity = '0';
         preview.style.transform = 'scale(0.8)';
-
         setTimeout(() => {
             preview.remove();
             updatePreviewCarouselControls();
             updateTotalSizeIndicator();
-
-            // Remove container if empty
             const previewContainer = document.querySelector('.file-preview-container');
             if (previewContainer && previewContainer.querySelectorAll('.file-preview-item').length === 0) {
                 previewContainer.remove();
@@ -514,7 +442,6 @@ function removeFile(type, filename) {
     }
 }
 
-// Update total size indicator
 function updateTotalSizeIndicator() {
     const indicator = document.querySelector('.total-size-indicator');
     if (indicator) {
@@ -533,16 +460,10 @@ function updateTotalSizeIndicator() {
         `;
     }
 }
-// ============================================
-// LINK DETECTION IN CONTENT
-// ============================================
 
 function detectLinks(text) {
     if (!text) return text;
-
-    // URL detection regex
     const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[^\s]+\.[^\s]{2,})/g;
-
     return text.replace(urlRegex, (url) => {
         let href = url;
         if (!url.startsWith('http')) {
@@ -552,38 +473,27 @@ function detectLinks(text) {
     });
 }
 
-// ============================================
-// FILE PROCESSING WITH COMPRESSION
-// ============================================
-
 async function processImageFile(file) {
     try {
         console.log(`Processing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-
         let processedFile = file;
         let compressionInfo = null;
-
-        // Compress if file is too large
         if (file.size > FILE_LIMITS.IMAGE) {
             showLoadingModal(`Compressing ${file.name}...`);
             const result = await compressImage(file);
             processedFile = result.file;
             compressionInfo = result.info;
             hideLoadingModal();
-
             const savings = ((file.size - processedFile.size) / file.size * 100).toFixed(1);
             console.log(`Image compressed: ${savings}% savings`);
         }
-
         selectedFiles.images.push({
             file: processedFile,
             originalSize: file.size,
             compressedSize: processedFile.size,
             compressionInfo: compressionInfo
         });
-
         showFilePreview('image', processedFile, compressionInfo);
-
     } catch (error) {
         console.error('Error processing image:', error);
         showTemporaryModal(`Failed to process ${file.name}`);
@@ -593,22 +503,17 @@ async function processImageFile(file) {
 async function processDocumentFile(file) {
     try {
         console.log(`Processing document: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-
-        // For documents, we can't compress much, just check size
         if (file.size > FILE_LIMITS.DOCUMENT) {
             showTemporaryModal(`${file.name} is too large (max ${FILE_LIMITS.DOCUMENT / 1024 / 1024}MB)`);
             return;
         }
-
         selectedFiles.documents.push({
             file: file,
             originalSize: file.size,
             compressedSize: file.size,
             compressionInfo: null
         });
-
         showFilePreview('document', file, null);
-
     } catch (error) {
         console.error('Error processing document:', error);
         showTemporaryModal(`Failed to process ${file.name}`);
@@ -618,40 +523,29 @@ async function processDocumentFile(file) {
 async function processVideoFile(file) {
     try {
         console.log(`Processing video: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-
         let processedFile = file;
         let compressionInfo = null;
-
-        // Compress if file is too large
         if (file.size > FILE_LIMITS.VIDEO) {
             showLoadingModal(`Compressing ${file.name}... This may take a while.`);
             const result = await compressVideo(file);
             processedFile = result.file;
             compressionInfo = result.info;
             hideLoadingModal();
-
             const savings = ((file.size - processedFile.size) / file.size * 100).toFixed(1);
             console.log(`Video compressed: ${savings}% savings`);
         }
-
         selectedFiles.videos.push({
             file: processedFile,
             originalSize: file.size,
             compressedSize: processedFile.size,
             compressionInfo: compressionInfo
         });
-
         showFilePreview('video', processedFile, compressionInfo);
-
     } catch (error) {
         console.error('Error processing video:', error);
         showTemporaryModal(`Failed to process ${file.name}`);
     }
 }
-
-// ============================================
-// COMPRESSION FUNCTIONS
-// ============================================
 
 async function compressImage(file) {
     return new Promise((resolve, reject) => {
@@ -661,28 +555,20 @@ async function compressImage(file) {
             img.onload = function() {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-
-                // Calculate new dimensions
                 let { width, height } = img;
                 if (width > COMPRESSION_SETTINGS.IMAGE.maxWidth) {
                     height = (height * COMPRESSION_SETTINGS.IMAGE.maxWidth) / width;
                     width = COMPRESSION_SETTINGS.IMAGE.maxWidth;
                 }
-
                 canvas.width = width;
                 canvas.height = height;
-
-                // Draw and compress
                 ctx.drawImage(img, 0, 0, width, height);
-
                 canvas.toBlob((blob) => {
                     const compressedFile = new File([blob], file.name, {
                         type: 'image/jpeg',
                         lastModified: Date.now()
                     });
-
                     const savings = ((file.size - compressedFile.size) / file.size * 100).toFixed(1);
-
                     resolve({
                         file: compressedFile,
                         info: {
@@ -707,10 +593,8 @@ async function compressVideo(file) {
     return new Promise((resolve) => {
         const video = document.createElement('video');
         video.src = URL.createObjectURL(file);
-
         video.onloadedmetadata = function() {
-            const savings = 0; // No compression in this example
-
+            const savings = 0;
             resolve({
                 file: file,
                 info: {
@@ -719,10 +603,8 @@ async function compressVideo(file) {
                     originalSize: file.size
                 }
             });
-
             URL.revokeObjectURL(video.src);
         };
-
         video.onerror = () => {
             resolve({
                 file: file,
@@ -732,53 +614,35 @@ async function compressVideo(file) {
     });
 }
 
-// Enhanced submit post with link detection
 async function submitPost() {
     const title = document.querySelector('#createPostForm input[type="text"]').value;
     const content = document.querySelector('#createPostForm textarea').value;
     const userId = localStorage.getItem('userId');
-
     if (!title || !content) {
         showTemporaryModal('Please fill in all fields');
         return;
     }
-
     const totalSize = calculateTotalFileSize();
     if (totalSize > FILE_LIMITS.TOTAL) {
         showTemporaryModal(`Total file size too large (${(totalSize / 1024 / 1024).toFixed(1)}MB). Maximum is 100MB.`);
         return;
     }
-
     try {
-        // 1. Close form and return to feed
         toggleCreatePost();
         showFeed();
-
-        // 2. Show uploading modal
         showUploadingModal();
-
-        // 3. Prepare form data
         const formData = new FormData();
         formData.append('title', title);
         formData.append('content', content);
         formData.append('userId', userId);
-
         selectedFiles.images.forEach(item => formData.append('images', item.file));
         selectedFiles.documents.forEach(item => formData.append('documents', item.file));
         selectedFiles.videos.forEach(item => formData.append('videos', item.file));
-
-        // 4. Upload with progress
         const response = await uploadWithProgress(formData);
         const data = await response.json();
-
-        // 5. Hide uploading modal
         hideUploadingModal();
-
         if (response.ok && data.status === 'success') {
-            // 6. Show success notification
             showSuccessModal('Post uploaded successfully!');
-
-            // 7. Clear form and reload
             resetPostForm();
             await loadPosts();
         } else {
@@ -789,18 +653,17 @@ async function submitPost() {
         hideUploadingModal();
         showErrorModal('Error uploading post. Please try again.');
     }
-}// Upload with progress tracking
+}
+
 function uploadWithProgress(formData) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-
         xhr.upload.addEventListener('progress', (e) => {
             if (e.lengthComputable) {
                 const percentComplete = (e.loaded / e.total) * 100;
                 updateUploadProgress(percentComplete);
             }
         });
-
         xhr.addEventListener('load', () => {
             resolve({
                 ok: xhr.status >= 200 && xhr.status < 300,
@@ -808,20 +671,16 @@ function uploadWithProgress(formData) {
                 json: () => Promise.resolve(JSON.parse(xhr.responseText))
             });
         });
-
         xhr.addEventListener('error', () => reject(new Error('Upload failed')));
         xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
-
         xhr.open('POST', `${API_BASE_URL}/posts/multiple`);
         xhr.send(formData);
     });
 }
 
-// Show uploading modal
 function showUploadingModal() {
     const existingModal = document.querySelector('.upload-progress-modal');
     if (existingModal) existingModal.remove();
-
     const modal = document.createElement('div');
     modal.className = 'upload-progress-modal active';
     modal.innerHTML = `
@@ -858,7 +717,6 @@ function showUploadingModal() {
     document.body.appendChild(modal);
 }
 
-// Update progress
 function updateUploadProgress(percent) {
     const progressFill = document.getElementById('uploadProgressFill');
     const progressText = document.getElementById('uploadProgressText');
@@ -866,7 +724,6 @@ function updateUploadProgress(percent) {
     if (progressText) progressText.textContent = `${Math.round(percent)}%`;
 }
 
-// Hide uploading modal
 function hideUploadingModal() {
     const modal = document.querySelector('.upload-progress-modal');
     if (modal) {
@@ -875,7 +732,6 @@ function hideUploadingModal() {
     }
 }
 
-// Show success modal
 function showSuccessModal(message) {
     const modal = document.createElement('div');
     modal.className = 'notification-modal success active';
@@ -895,7 +751,6 @@ function showSuccessModal(message) {
     setTimeout(() => closeNotificationModal(modal.querySelector('.notification-btn')), 3000);
 }
 
-// Show error modal
 function showErrorModal(message) {
     const modal = document.createElement('div');
     modal.className = 'notification-modal error active';
@@ -914,7 +769,6 @@ function showErrorModal(message) {
     document.body.appendChild(modal);
 }
 
-// Close notification modal
 function closeNotificationModal(button) {
     const modal = button.closest('.notification-modal');
     if (modal) {
@@ -923,8 +777,6 @@ function closeNotificationModal(button) {
     }
 }
 
-// Export functions
-window.closeNotificationModal = closeNotificationModal;
 function resetPostForm() {
     document.querySelector('#createPostForm input[type="text"]').value = '';
     document.querySelector('#createPostForm textarea').value = '';
@@ -942,17 +794,14 @@ function calculateTotalFileSize() {
 }
 
 // ============================================
-// UPDATED POST RENDERING WITH LINKS AND CAROUSEL
+// POST RENDERING & CAROUSEL
 // ============================================
 
 function renderPosts(posts) {
     const newsFeed = document.getElementById('newsFeed');
     if (!newsFeed) return;
-
     localStorage.setItem('cachedPosts', JSON.stringify(posts));
-
     newsFeed.innerHTML = posts.map(post => {
-        // Log the post data to see what files are available
         console.log('Post data:', {
             id: post.id,
             title: post.title,
@@ -960,7 +809,6 @@ function renderPosts(posts) {
             imageUrlList: post.imageUrlList,
             videoUrlList: post.videoUrlList
         });
-
         return `
         <article class="post-card" data-post-id="${post.id}">
             <header class="post-header">
@@ -997,13 +845,11 @@ function renderPosts(posts) {
             </div>
         </article>
     `}).join('');
-
     initializePostCarousels();
     posts.forEach(post => {
         if (post.id) loadPostStatus(post.id);
     });
 }
-
 
 function renderFilesCarousel(post) {
     const allFiles = [
@@ -1011,9 +857,7 @@ function renderFilesCarousel(post) {
         ...(post.documentUrlList || []).map(url => ({ type: 'document', url })),
         ...(post.videoUrlList || []).map(url => ({ type: 'video', url }))
     ];
-
     if (allFiles.length === 0) return '';
-
     return `
         <div class="post-files-carousel">
             <div class="carousel-container">
@@ -1047,23 +891,11 @@ function renderFilesCarousel(post) {
     `;
 }
 
-// Enhanced file item rendering with media controls
-// ============================================
-// ENHANCED MEDIA CONTROLS WITH MAXIMIZE & DOWNLOAD PERMISSION
-// ============================================
-
 let currentPlayingVideo = null;
 let currentMaximizedVideo = null;
 
-// ============================================
-// FIXED VIDEO PLAYBACK SYSTEM
-// ============================================
-
-// Replace the problematic handleVideoClick function with this simpler version:
 function handleVideoClick(event, videoElement) {
     event.stopPropagation();
-
-    // Stop currently playing video
     if (currentPlayingVideo && currentPlayingVideo !== videoElement) {
         currentPlayingVideo.pause();
         const otherContainer = currentPlayingVideo.closest('.media-container');
@@ -1075,8 +907,6 @@ function handleVideoClick(event, videoElement) {
             }
         }
     }
-
-    // Toggle play/pause
     if (videoElement.paused) {
         videoElement.play().then(() => {
             const container = videoElement.closest('.media-container');
@@ -1106,11 +936,11 @@ function handleVideoClick(event, videoElement) {
     }
 }
 
-// Replace the handleVideoControlsClick function:
 function handleVideoControlsClick(event, videoUrl, filename) {
     event.stopPropagation();
     maximizeVideo(videoUrl, filename);
 }
+
 function handleVideoMaximizeKeydown(e) {
     if (e.key === 'Escape') {
         closeMaximizedVideo();
@@ -1151,7 +981,6 @@ function closeMaximizedImage() {
     document.removeEventListener('keydown', handleMaximizeKeydown);
 }
 
-
 function closeDownloadPermission() {
     const modal = document.querySelector('.download-permission-modal');
     if (modal) {
@@ -1169,15 +998,10 @@ function handleDownloadPermissionKeydown(e) {
     }
 }
 
-
-// Video play/pause control
 function toggleVideoPlay(container) {
     const video = container.querySelector('video');
     const playBtn = container.querySelector('.video-play-btn i');
-
     if (!video) return;
-
-    // Stop currently playing video
     if (currentPlayingVideo && currentPlayingVideo !== video) {
         currentPlayingVideo.pause();
         const otherContainer = currentPlayingVideo.closest('.media-container');
@@ -1189,9 +1013,7 @@ function toggleVideoPlay(container) {
             }
         }
     }
-
     if (video.paused) {
-        // Play video
         video.play().then(() => {
             container.classList.add('video-playing');
             playBtn.className = 'bx bx-pause';
@@ -1201,7 +1023,6 @@ function toggleVideoPlay(container) {
             showTemporaryModal('Error playing video');
         });
     } else {
-        // Pause video
         video.pause();
         container.classList.remove('video-playing');
         playBtn.className = 'bx bx-play';
@@ -1215,76 +1036,46 @@ function handleMaximizeKeydown(e) {
     }
 }
 
-// Enhanced carousel initialization with media detection
-// Update the initializePostCarousels function:
-// Enhanced carousel initialization with media detection
-// Update the initializePostCarousels function:
 function initializePostCarousels() {
     document.querySelectorAll('.post-files-carousel').forEach(carousel => {
         const track = carousel.querySelector('.carousel-track');
-
         if (!track) return;
-
-        // Initialize media elements
         initializeCarouselMedia(carousel);
-
-        // Initialize video players
         initializeVideoPlayers();
-
-        // Update navigation on scroll
         track.addEventListener('scroll', () => {
             updateCarouselNavigation(carousel);
             pauseVideosOnScroll(carousel);
         });
-
-        // Initialize touch events for mobile
         if (isTouchDevice()) {
             initializeCarouselTouchEvents(carousel);
         }
-
-        // Initialize arrow behavior
         initializeCarouselArrows(carousel);
-
-        // Initial update
         updateCarouselNavigation(carousel);
     });
-}// Initialize media elements in carousel
+}
+
 function initializeCarouselMedia(carousel) {
     const slides = carousel.querySelectorAll('.carousel-slide');
-
     slides.forEach(slide => {
         const images = slide.querySelectorAll('img');
         const videos = slide.querySelectorAll('video');
-
-        // Set up images
         images.forEach(img => {
-            // Detect image orientation and set appropriate class
             img.onload = function() {
                 detectMediaOrientation(img);
             };
-
-            // If image already loaded
             if (img.complete) {
                 detectMediaOrientation(img);
             }
         });
-
-        // Set up videos
         videos.forEach(video => {
-            // Prevent auto-play
             video.setAttribute('preload', 'metadata');
-
-            // Add loading state
             video.addEventListener('loadstart', () => {
                 video.parentElement.classList.add('video-loading');
             });
-
             video.addEventListener('loadeddata', () => {
                 video.parentElement.classList.remove('video-loading');
                 detectMediaOrientation(video);
             });
-
-            // Handle video end
             video.addEventListener('ended', () => {
                 const container = video.closest('.media-container');
                 if (container) {
@@ -1296,8 +1087,6 @@ function initializeCarouselMedia(carousel) {
                 }
                 currentPlayingVideo = null;
             });
-
-            // Handle video errors
             video.addEventListener('error', () => {
                 video.parentElement.classList.remove('video-loading');
                 console.error('Error loading video:', video.src);
@@ -1306,14 +1095,11 @@ function initializeCarouselMedia(carousel) {
     });
 }
 
-// Detect media orientation and apply appropriate styling
 function detectMediaOrientation(media) {
     const container = media.closest('.media-container');
     if (!container) return;
-
     const isImage = media.tagName.toLowerCase() === 'img';
     let width, height;
-
     if (isImage) {
         width = media.naturalWidth;
         height = media.naturalHeight;
@@ -1321,11 +1107,7 @@ function detectMediaOrientation(media) {
         width = media.videoWidth;
         height = media.videoHeight;
     }
-
-    // Remove existing orientation classes
     container.classList.remove('media-landscape', 'media-portrait');
-
-    // Add appropriate orientation class
     if (width > height) {
         container.classList.add('media-landscape');
     } else {
@@ -1333,16 +1115,12 @@ function detectMediaOrientation(media) {
     }
 }
 
-// Pause videos when scrolling away from them
 function pauseVideosOnScroll(carousel) {
     const track = carousel.querySelector('.carousel-track');
     const viewport = carousel.querySelector('.carousel-viewport');
-
     if (!track || !viewport) return;
-
     const viewportRect = viewport.getBoundingClientRect();
     const videos = carousel.querySelectorAll('video');
-
     videos.forEach(video => {
         const videoRect = video.getBoundingClientRect();
         const isVisible = (
@@ -1351,7 +1129,6 @@ function pauseVideosOnScroll(carousel) {
             videoRect.left >= viewportRect.left &&
             videoRect.right <= viewportRect.right
         );
-
         if (!isVisible && !video.paused) {
             video.pause();
             const container = video.closest('.media-container');
@@ -1369,70 +1146,48 @@ function pauseVideosOnScroll(carousel) {
     });
 }
 
-// Enhanced touch events with better video handling
 function initializeCarouselTouchEvents(carousel) {
     let startX = 0;
     let isSwiping = false;
     let touchStartTime = 0;
-
     const track = carousel.querySelector('.carousel-track');
     if (!track) return;
-
     carousel.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX;
         isSwiping = true;
         touchStartTime = Date.now();
         carousel.classList.add('touch-active');
-
-        // Show arrows on touch
         const prevBtn = carousel.querySelector('.prev');
         const nextBtn = carousel.querySelector('.next');
         if (prevBtn) prevBtn.style.opacity = '1';
         if (nextBtn) nextBtn.style.opacity = '1';
-
-        // Check if touch is on video controls
         const video = e.target.closest('video');
         if (video) {
-            e.stopPropagation(); // Prevent carousel swipe when interacting with video
+            e.stopPropagation();
         }
     });
-
     carousel.addEventListener('touchmove', (e) => {
         if (!isSwiping) return;
-
-        // Prevent swipe if interacting with video controls
         const videoControls = e.target.closest('.video-controls-overlay');
         if (videoControls) {
             isSwiping = false;
         }
     });
-
     carousel.addEventListener('touchend', (e) => {
         if (!isSwiping) return;
         isSwiping = false;
-
         const endX = e.changedTouches[0].clientX;
         const diff = startX - endX;
         const swipeThreshold = 50;
-        const tapThreshold = 200; // ms for tap vs swipe
-
+        const tapThreshold = 200;
         const isTap = (Date.now() - touchStartTime) < tapThreshold;
-
         if (Math.abs(diff) > swipeThreshold) {
-            // It's a swipe
             if (diff > 0) {
-                // Swipe left - next
                 carousel.querySelector('.next')?.click();
             } else {
-                // Swipe right - previous
                 carousel.querySelector('.prev')?.click();
             }
-        } else if (isTap) {
-            // It's a tap - handle video/image interaction
-            // Removed handleCarouselTap call as the function was deleted
         }
-
-        // Hide arrows after delay
         setTimeout(() => {
             if (!carousel.matches(':hover')) {
                 carousel.classList.remove('touch-active');
@@ -1441,48 +1196,32 @@ function initializeCarouselTouchEvents(carousel) {
     });
 }
 
-// Enhanced carousel navigation with media handling
 function scrollPostCarousel(button, direction) {
     if (isAnimating) return;
-
     const carousel = button.closest('.post-files-carousel');
-
-    // Pause any playing video in current carousel
     pauseVideosInCarousel(carousel);
-
     const track = carousel.querySelector('.carousel-track');
     const slides = carousel.querySelectorAll('.carousel-slide');
-
     if (!track || slides.length === 0) return;
-
     const slideWidth = slides[0].offsetWidth + 16;
     const currentScroll = track.scrollLeft;
     const maxScroll = track.scrollWidth - track.clientWidth;
-
     let newScroll = currentScroll + (direction * slideWidth);
     newScroll = Math.max(0, Math.min(newScroll, maxScroll));
-
     isAnimating = true;
-
-    // Smooth scroll
     track.style.scrollBehavior = 'smooth';
     track.scrollTo({ left: newScroll, behavior: 'smooth' });
-
-    // Update UI after animation
     setTimeout(() => {
         updateCarouselNavigation(carousel);
         isAnimating = false;
         track.style.scrollBehavior = 'auto';
     }, animationDuration);
-
-    // Button feedback
     button.style.transform = 'translateY(-50%) scale(0.95)';
     setTimeout(() => {
         button.style.transform = 'translateY(-50%) scale(1)';
     }, 150);
 }
 
-// Pause all videos in a carousel
 function pauseVideosInCarousel(carousel) {
     const videos = carousel.querySelectorAll('video');
     videos.forEach(video => {
@@ -1498,111 +1237,76 @@ function pauseVideosInCarousel(carousel) {
             }
         }
     });
-
     if (currentPlayingVideo && carousel.contains(currentPlayingVideo)) {
         currentPlayingVideo = null;
     }
 }
 
-// Enhanced goToSlide with video handling
 function goToSlide(button, index) {
     if (isAnimating) return;
-
     const carousel = button.closest('.post-files-carousel');
-
-    // Pause any playing video in current carousel
     pauseVideosInCarousel(carousel);
-
     const track = carousel.querySelector('.carousel-track');
     const slides = carousel.querySelectorAll('.carousel-slide');
-
     if (!track || slides.length === 0) return;
-
     const slideWidth = slides[0].offsetWidth + 16;
-
     isAnimating = true;
-
-    // Smooth scroll to target
     track.style.scrollBehavior = 'smooth';
     track.scrollTo({ left: index * slideWidth, behavior: 'smooth' });
-
-    // Update active states
     setTimeout(() => {
         updateCarouselNavigation(carousel);
         isAnimating = false;
         track.style.scrollBehavior = 'auto';
     }, animationDuration);
-
-    // Button feedback
     button.style.transform = 'scale(1.4)';
     setTimeout(() => {
         button.style.transform = 'scale(1.2)';
     }, 200);
 }
 
-// ============================================
-// SMOOTH CAROUSEL SYSTEM - FIXED VERSION
-// ============================================
-
 let isAnimating = false;
 const animationDuration = 400;
 
-// Detect if device is touch-enabled
 function isTouchDevice() {
     return (('ontouchstart' in window) ||
         (navigator.maxTouchPoints > 0) ||
         (navigator.msMaxTouchPoints > 0));
 }
 
-// Update carousel navigation state
 function updateCarouselNavigation(carousel) {
     const track = carousel.querySelector('.carousel-track');
     const prevBtn = carousel.querySelector('.prev');
     const nextBtn = carousel.querySelector('.next');
     const slides = carousel.querySelectorAll('.carousel-slide');
     const indicators = carousel.querySelectorAll('.indicator');
-
     if (!track || !prevBtn || !nextBtn) return;
-
     const { scrollLeft, scrollWidth, clientWidth } = track;
     const slideWidth = slides[0]?.offsetWidth + 16 || 1;
     const currentIndex = Math.round(scrollLeft / slideWidth);
-
-    // Update button visibility
     prevBtn.style.opacity = scrollLeft > 10 ? '1' : '0.5';
     nextBtn.style.opacity = scrollLeft < scrollWidth - clientWidth - 10 ? '1' : '0.5';
-
-    // Update active states
     slides.forEach((slide, index) => {
         slide.classList.toggle('active', index === currentIndex);
     });
-
     indicators.forEach((indicator, index) => {
         indicator.classList.toggle('active', index === currentIndex);
     });
 }
 
-// Smart arrow visibility
 function initializeCarouselArrows(carousel) {
     const prevBtn = carousel.querySelector('.prev');
     const nextBtn = carousel.querySelector('.next');
-
     if (!prevBtn || !nextBtn) return;
-
     if (isTouchDevice()) {
-        // On touch devices - show on touch, hide by default
         prevBtn.style.opacity = '0';
         nextBtn.style.opacity = '0';
     } else {
-        // On desktop - show on hover
         prevBtn.style.opacity = '0';
         nextBtn.style.opacity = '0';
-
         carousel.addEventListener('mouseenter', () => {
             prevBtn.style.opacity = '1';
             nextBtn.style.opacity = '1';
         });
-
         carousel.addEventListener('mouseleave', () => {
             prevBtn.style.opacity = '0';
             nextBtn.style.opacity = '0';
@@ -1610,8 +1314,215 @@ function initializeCarouselArrows(carousel) {
     }
 }
 
+function renderFileItem(file, post) {
+    const fullUrl = file.url;
+    const filename = getFileNameFromUrl(file.url);
+    const postTitle = escapeJsString(post.title);
+    const author = escapeJsString(`${post.user.firstName} ${post.user.lastName}`);
+    switch (file.type) {
+        case 'image':
+            return `
+                <div class="media-container" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'image', '${fullUrl}'); maximizeImage('${fullUrl}', '${filename}')">
+                    <img src="${fullUrl}" alt="${filename}" class="post-file-image" loading="lazy">
+                </div>
+            `;
+        case 'video':
+            return `
+                <div class="media-container">
+                    <video class="post-file-video" preload="metadata"
+                           onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); handleVideoClick(event, this)">
+                        <source src="${fullUrl}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="video-controls-overlay" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); maximizeVideo('${fullUrl}', '${filename}')">
+                        <button class="video-play-btn">
+                            <i class='bx bx-play'></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        case 'document':
+            return `
+                <div class="post-file-document" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'document', ''); openDocumentPreview('${fullUrl}', '${filename}')">
+                    <i class='bx bx-file'></i>
+                    <div class="document-info">
+                        <div class="document-name">${filename}</div>
+                        <div class="document-type">Document</div>
+                    </div>
+                    <button class="download-btn" onclick="event.stopPropagation(); requestDownloadPermission('${fullUrl}', '${filename}')">
+                        <i class='bx bx-download'></i>
+                    </button>
+                </div>
+            `;
+        default:
+            return '';
+    }
+}
+
+function maximizeImage(imageUrl, filename) {
+    const modal = document.createElement('div');
+    modal.className = 'image-maximize-modal active';
+    modal.innerHTML = `
+    <div class="maximized-image-container">
+        <img src="${imageUrl}" class="maximized-image" onclick="event.stopPropagation()">
+        <div class="maximize-controls">
+            <div class="maximize-controls-right">
+                <button class="maximize-btn" onclick="requestDownloadPermission('${imageUrl}', '${filename}')">
+                    <i class='bx bx-download'></i>
+                </button>
+                <button class="maximize-btn" onclick="closeMaximizedImage()">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+        </div>
+    </div>
+`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeMaximizedImage();
+        }
+    });
+    document.addEventListener('keydown', handleMaximizeKeydown);
+}
+
+function closeMaximizedVideo() {
+    if (currentMaximizedVideo) {
+        currentMaximizedVideo.pause();
+        currentMaximizedVideo = null;
+    }
+    const modal = document.querySelector('.video-maximize-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
+    }
+    document.removeEventListener('keydown', handleVideoMaximizeKeydown);
+}
+
+function initializeVideoPlayers() {
+    document.querySelectorAll('video').forEach(video => {
+        video.onclick = null;
+        video.addEventListener('click', function(e) {
+            handleVideoClick(e, this);
+        });
+        video.addEventListener('ended', function() {
+            const container = this.closest('.media-container');
+            if (container) {
+                container.classList.remove('video-playing');
+                const playBtn = container.querySelector('.video-play-btn i');
+                if (playBtn) {
+                    playBtn.className = 'bx bx-play';
+                }
+            }
+            if (currentPlayingVideo === this) {
+                currentPlayingVideo = null;
+            }
+        });
+    });
+}
+
+function updateMaximizedVideoControls(isPlaying) {
+    const playPauseIcon = document.querySelector('.video-maximize-modal .video-play-btn i');
+    if (playPauseIcon) {
+        playPauseIcon.className = isPlaying ? 'bx bx-pause' : 'bx bx-play';
+    }
+}
+
+function toggleMaximizedVideoPlay() {
+    if (!currentMaximizedVideo) return;
+    if (currentMaximizedVideo.paused) {
+        currentMaximizedVideo.play();
+    } else {
+        currentMaximizedVideo.pause();
+    }
+}
+
+function maximizeVideo(videoUrl, filename) {
+    if (currentPlayingVideo) {
+        currentPlayingVideo.pause();
+        const container = currentPlayingVideo.closest('.media-container');
+        if (container) {
+            container.classList.remove('video-playing');
+            const playBtn = container.querySelector('.video-play-btn i');
+            if (playBtn) {
+                playBtn.className = 'bx bx-play';
+            }
+        }
+        currentPlayingVideo = null;
+    }
+    const modal = document.createElement('div');
+    modal.className = 'video-maximize-modal active';
+    modal.innerHTML = `
+        <div class="maximized-video-container">
+            <video class="maximized-video" controls autoplay>
+                <source src="${videoUrl}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div class="maximize-controls">
+                <div class="maximize-controls-right">
+                    <button class="maximize-btn" onclick="requestDownloadPermission('${videoUrl}', '${filename}')">
+                        <i class='bx bx-download'></i>
+                    </button>
+                    <button class="maximize-btn" onclick="closeMaximizedVideo()">
+                        <i class='bx bx-x'></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const video = modal.querySelector('.maximized-video');
+    currentMaximizedVideo = video;
+    video.addEventListener('play', () => {
+        updateMaximizedVideoControls(true);
+    });
+    video.addEventListener('pause', () => {
+        updateMaximizedVideoControls(false);
+    });
+    video.addEventListener('loadeddata', () => {
+        modal.classList.remove('video-loading');
+    });
+    video.addEventListener('waiting', () => {
+        modal.classList.add('video-loading');
+    });
+    video.addEventListener('canplay', () => {
+        modal.classList.remove('video-loading');
+    });
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeMaximizedVideo();
+        }
+    });
+    document.addEventListener('keydown', handleVideoMaximizeKeydown);
+    video.play().catch(error => {
+        console.error('Error auto-playing maximized video:', error);
+        video.controls = true;
+    });
+}
+
+function closeDocumentPreview() {
+    const modal = document.querySelector('.document-preview-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+    document.removeEventListener('keydown', handleDocumentPreviewKeydown);
+}
+
+function handleDocumentPreviewKeydown(e) {
+    if (e.key === 'Escape') {
+        closeDocumentPreview();
+    }
+}
+
 // ============================================
-// POST INTERACTION FUNCTIONS
+// POST INTERACTION (Like, Save, Comments)
 // ============================================
 
 async function toggleLike(id, button) {
@@ -1620,29 +1531,19 @@ async function toggleLike(id, button) {
         showTemporaryModal('Please log in to like posts');
         return;
     }
-
     try {
         const response = await fetch(`${API_BASE_URL}/posts/${id}/like`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: parseInt(userId) })
         });
-
         const data = await response.json();
-
         if (response.ok && data.status === 'success') {
-            // Update the specific button that was clicked
             updateLikeButton(button, data.isLiked);
-
-            // Update all instances of this post (in case it appears in multiple places)
             updateAllPostInstances(id, {
                 likesCount: data.likesCount,
                 isLiked: data.isLiked
             });
-
-            // Update profile stats if on profile page
             const profilePage = document.getElementById('profilePage');
             if (profilePage && profilePage.classList.contains('active')) {
                 await updateProfileStats(userId);
@@ -1660,30 +1561,19 @@ async function toggleSave(id, button) {
         showTemporaryModal('Please log in to save posts');
         return;
     }
-
     try {
         const response = await fetch(`${API_BASE_URL}/posts/${id}/save`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: parseInt(userId) })
         });
-
         const data = await response.json();
-
         if (response.ok && data.status === 'success') {
-            // Update the specific button that was clicked
             updateSaveButton(button, data.isSaved);
-
-            // Update all instances of this post
             updateAllPostInstances(id, {
                 isSaved: data.isSaved
             });
-
             showTemporaryModal(data.isSaved ? 'Post saved!' : 'Post unsaved!');
-
-            // Update profile stats if on profile page
             const profilePage = document.getElementById('profilePage');
             if (profilePage && profilePage.classList.contains('active')) {
                 await updateProfileStats(userId);
@@ -1695,26 +1585,19 @@ async function toggleSave(id, button) {
     }
 }
 
-// Helper function to update all instances of a post
 function updateAllPostInstances(postId, updates) {
     const allPostInstances = document.querySelectorAll(`[data-post-id="${postId}"]`);
-
     allPostInstances.forEach(postCard => {
-        // Update likes count
         if (updates.likesCount !== undefined) {
             const likesSpan = postCard.querySelector('.post-stats span:first-child');
             if (likesSpan) {
                 likesSpan.textContent = `${updates.likesCount} Likes`;
             }
         }
-
-        // Update like buttons
         if (updates.isLiked !== undefined) {
             const likeBtns = postCard.querySelectorAll('.like-btn');
             likeBtns.forEach(btn => updateLikeButton(btn, updates.isLiked));
         }
-
-        // Update save buttons
         if (updates.isSaved !== undefined) {
             const saveBtns = postCard.querySelectorAll('.save-btn');
             saveBtns.forEach(btn => updateSaveButton(btn, updates.isSaved));
@@ -1722,36 +1605,23 @@ function updateAllPostInstances(postId, updates) {
     });
 }
 
-// ============================================
-// COMMENTS FUNCTIONS
-// ============================================
-
 async function toggleComments(postId) {
-    // Find the post card that contains the clicked button
     let postCard;
-
-    // If called from onclick, event.target might help us find the right post card
     if (event) {
         postCard = event.target.closest('[data-post-id]');
     }
-
-    // If we still don't have a post card, try to find any instance
     if (!postCard) {
         postCard = document.querySelector(`[data-post-id="${postId}"]`);
     }
-
     if (!postCard) {
         console.error('Post card not found for ID:', postId);
         return;
     }
-
     let commentsSection = postCard.querySelector('.comments-section');
-
     if (commentsSection) {
         commentsSection.remove();
         return;
     }
-
     commentsSection = document.createElement('div');
     commentsSection.className = 'comments-section';
     commentsSection.innerHTML = `
@@ -1777,23 +1647,18 @@ async function toggleComments(postId) {
             </button>
         </div>
     `;
-
-    // Find the post-actions div to insert comments after it
     const postActions = postCard.querySelector('.post-actions');
     if (postActions) {
         postActions.after(commentsSection);
     } else {
-        // Fallback: insert at the end of post card
         postCard.appendChild(commentsSection);
     }
-
     await loadComments(postId);
 }
 
 async function loadComments(postId) {
     try {
         const response = await fetch(`${API_BASE_URL}/api/comments/post/${postId}`);
-
         if (response.ok) {
             const data = await response.json();
             renderComments(postId, data.comments || []);
@@ -1809,7 +1674,6 @@ async function loadComments(postId) {
 function renderComments(postId, comments) {
     const commentsList = document.getElementById(`commentsList${postId}`);
     if (!commentsList) return;
-
     if (comments.length === 0) {
         commentsList.innerHTML = `
             <div class="empty-comments">
@@ -1819,7 +1683,6 @@ function renderComments(postId, comments) {
         `;
         return;
     }
-
     commentsList.innerHTML = comments.map(comment => `
         <div class="comment-item" data-comment-id="${comment.id}">
             <div class="comment-avatar">${getUserInitials(comment.user)}</div>
@@ -1835,41 +1698,28 @@ function renderComments(postId, comments) {
 async function sendComment(postId) {
     const input = document.getElementById(`commentInput${postId}`);
     if (!input) return;
-
     const content = input.value.trim();
     if (!content) {
         showTemporaryModal('Please enter a comment');
         return;
     }
-
     const userId = localStorage.getItem('userId');
-
     try {
         const response = await fetch(`${API_BASE_URL}/api/comments/post/${postId}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                content: content,
-                userId: userId
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content, userId: userId })
         });
-
         const data = await response.json();
-
         if (response.ok && data.status === 'success') {
             input.value = '';
             await loadComments(postId);
-
             const postCard = document.querySelector(`[data-post-id="${postId}"]`);
             const commentsSpan = postCard.querySelector('.post-stats span:nth-child(2)');
             if (commentsSpan) {
                 const currentCount = parseInt(commentsSpan.textContent.match(/\d+/)[0]);
                 commentsSpan.textContent = `${currentCount + 1} Comments`;
             }
-
-            // Update profile stats if on profile page
             const profilePage = document.getElementById('profilePage');
             if (profilePage && profilePage.classList.contains('active')) {
                 updateProfileStats(userId);
@@ -1890,28 +1740,23 @@ function handleCommentKeyPress(event, postId) {
 }
 
 // ============================================
-// PROFILE MANAGEMENT FUNCTIONS
+// PROFILE MANAGEMENT
 // ============================================
 
 async function updateUserProfileCard() {
     const userId = localStorage.getItem('userId');
-
     try {
         const response = await fetch(`${API_BASE_URL}/users/${userId}`);
-
         if (response.ok) {
             const user = await response.json();
-
             const userAvatar = document.querySelector('.user-avatar');
             const profilePic = document.querySelector('.profile-pic');
             const userName = document.querySelector('.user-name');
             const userEmail = document.querySelector('.user-email');
-
             if (userAvatar) userAvatar.textContent = getUserInitials(user);
             if (profilePic) profilePic.textContent = getUserInitials(user);
             if (userName) userName.textContent = `${user.firstName} ${user.lastName}`;
             if (userEmail) userEmail.textContent = user.email;
-
             updateProfilePage(user);
         }
     } catch (error) {
@@ -1921,17 +1766,11 @@ async function updateUserProfileCard() {
 
 async function loadUserProfile() {
     const userId = localStorage.getItem('userId');
-
     try {
         const response = await fetch(`${API_BASE_URL}/users/${userId}`);
-
         if (response.ok) {
             const user = await response.json();
-
-            // Also update the profile page details
             updateProfilePage(user);
-
-            // Fetch and update profile stats
             await updateProfileStats(userId);
         }
     } catch (error) {
@@ -1942,23 +1781,18 @@ async function loadUserProfile() {
 
 async function updateProfileStats(userId) {
     try {
-        // Fetch user's posts count
         const postsResponse = await fetch(`${API_BASE_URL}/users/${userId}/posts`);
         let postsCount = 0;
         if (postsResponse.ok) {
             const posts = await postsResponse.json();
             postsCount = posts.length;
         }
-
-        // Fetch user's liked posts count
         const likedResponse = await fetch(`${API_BASE_URL}/users/${userId}/liked-posts`);
         let likedCount = 0;
         if (likedResponse.ok) {
             const liked = await likedResponse.json();
             likedCount = liked.length;
         }
-
-        // Update the stats in the profile page
         const statItems = document.querySelectorAll('.stat-item');
         if (statItems.length >= 4) {
             statItems[0].querySelector('.stat-number').textContent = postsCount;
@@ -1972,7 +1806,6 @@ async function updateProfileStats(userId) {
 async function loadProfileContent(tabName) {
     const userId = localStorage.getItem('userId');
     let endpoint = '';
-
     switch (tabName) {
         case 'posts':
             endpoint = `/users/${userId}/posts`;
@@ -1984,15 +1817,11 @@ async function loadProfileContent(tabName) {
             endpoint = `/users/${userId}/liked-posts`;
             break;
     }
-
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`);
-
         if (response.ok) {
             const data = await response.json();
             renderProfileContent(tabName, data);
-
-            // Force refresh statuses after a short delay
             setTimeout(() => {
                 refreshAllProfilePostsStatus();
             }, 500);
@@ -2006,30 +1835,22 @@ async function loadProfileContent(tabName) {
     }
 }
 
-// Helper function to extract filename from URL
 function getFileNameFromUrl(url) {
     if (!url) return 'Unknown File';
-
-    // For Cloudinary URLs
     if (url.includes('cloudinary.com')) {
         const parts = url.split('/');
-        // Remove file extension for display if needed
         return parts[parts.length - 1];
     }
-
-    // Fallback for other URLs
     const parts = url.split('/');
     const filename = parts[parts.length - 1];
-    return filename.replace(/^\d+_/, ''); // Remove timestamp prefix if present
+    return filename.replace(/^\d+_/, '');
 }
 
 function renderProfileContent(tabName, data) {
     const contentId = tabName === 'posts' ? 'postsContent' :
         tabName === 'saved' ? 'savedContent' : 'likedContent';
     const container = document.getElementById(contentId);
-
     if (!container) return;
-
     if (data.length === 0) {
         const emptyMessages = {
             'posts': {
@@ -2048,7 +1869,6 @@ function renderProfileContent(tabName, data) {
                 subtext: 'Posts you like will appear here'
             }
         };
-
         const message = emptyMessages[tabName];
         container.innerHTML = `
             <div class="empty-state">
@@ -2058,7 +1878,6 @@ function renderProfileContent(tabName, data) {
             </div>
         `;
     } else {
-        // Use the same renderPosts function but for the specific container
         renderPostsToContainer(container, data);
     }
 }
@@ -2100,34 +1919,25 @@ function renderPostsToContainer(container, posts) {
             </div>
         </article>
     `).join('');
-
-    // Initialize carousels for all posts
     initializePostCarousels();
-
-    // Load post statuses
     posts.forEach(post => {
         if (post.id) {
             loadPostStatus(post.id);
         }
     });
 }
+
 // ============================================
-// POST MENU FUNCTIONS
+// POST MENU (Edit, Delete, Report)
 // ============================================
 
 function togglePostMenu(event, postId, postUserId) {
     event.stopPropagation();
-
-    // Close any existing post menus
     document.querySelectorAll('.post-menu-dropdown').forEach(menu => menu.remove());
-
     const currentUserId = parseInt(localStorage.getItem('userId'));
     const isOwnPost = currentUserId === postUserId;
-
-    // Create dropdown menu
     const dropdown = document.createElement('div');
     dropdown.className = 'post-menu-dropdown';
-
     if (isOwnPost) {
         dropdown.innerHTML = `
             <div class="post-menu-item" onclick="editPost(event, ${postId})">
@@ -2147,14 +1957,11 @@ function togglePostMenu(event, postId, postUserId) {
             </div>
         `;
     }
-
-    // Position dropdown near the menu icon
     const menuIcon = event.currentTarget;
     const postCard = menuIcon.closest('.post-card');
     const postHeader = postCard.querySelector('.post-header');
     console.log('Menu icon:', menuIcon);
     console.log('Found post card:', postCard);
-
     if (!postCard) {
         console.error('Could not find post card from menu icon');
         return;
@@ -2164,10 +1971,7 @@ function togglePostMenu(event, postId, postUserId) {
     dropdown.style.right = '0';
     dropdown.style.top = '100%';
     dropdown.style.zIndex = '100';
-
     postHeader.appendChild(dropdown);
-
-    // Close dropdown when clicking outside
     setTimeout(() => {
         document.addEventListener('click', closePostMenus);
     }, 0);
@@ -2178,47 +1982,34 @@ function closePostMenus() {
     document.removeEventListener('click', closePostMenus);
 }
 
-// Edit Post Function
-// Edit Post Function - Fixed version
-// Edit Post Function - Fixed version
 async function editPost(event, postId) {
     event.stopPropagation();
     closePostMenus();
-
     try {
         let postCard = event.target.closest('.post-card') || document.querySelector(`[data-post-id="${postId}"]`);
         if (!postCard) {
             showTemporaryModal('Could not find post data');
             return;
         }
-
-        // Get the full post data from the cached posts or from the DOM
         const cachedPosts = JSON.parse(localStorage.getItem('cachedPosts') || '[]');
         const postData = cachedPosts.find(p => p.id === postId);
         if (!postData) {
             showTemporaryModal('Post data not found');
             return;
         }
-
-        // Check if it's a reviewer post
         const reviewerData = parseReviewerPostContent(postData.content);
         if (reviewerData) {
-            // ✅ Reviewer post: show modal to edit description only
             showEditReviewerDescriptionModal(postId, reviewerData);
             return;
         }
-
-        // Normal post: existing logic
         const titleElement = postCard.querySelector('.post-title');
         const contentElement = postCard.querySelector('.post-text');
         if (!titleElement || !contentElement) {
             showTemporaryModal('Could not load post content');
             return;
         }
-
         const title = titleElement.textContent || '';
         const content = contentElement.textContent || '';
-
         const post = {
             id: postId,
             title: title,
@@ -2263,47 +2054,34 @@ function showEditReviewerDescriptionModal(postId, reviewerData) {
 
 async function submitEditReviewerDescription(postId) {
     const description = document.getElementById('editReviewerDescription').value.trim();
-
-    // Get the current post content from cache or fetch
     const cachedPosts = JSON.parse(localStorage.getItem('cachedPosts') || '[]');
     const post = cachedPosts.find(p => p.id === postId);
     if (!post) {
         showTemporaryModal('Post not found');
         return;
     }
-
     const reviewerData = parseReviewerPostContent(post.content);
     if (!reviewerData) {
         showTemporaryModal('Invalid reviewer data');
         return;
     }
-
-    // Update description
     reviewerData.description = description || null;
-
-    // Reconstruct the content with updated description
     const content = post.content.split(REVIEWER_POST_MARKER)[0] + REVIEWER_POST_MARKER + JSON.stringify(reviewerData);
-
     try {
         const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 title: post.title,
                 content: content,
                 userId: localStorage.getItem('userId')
             })
         });
-
         const data = await response.json();
-
         if (response.ok && data.status === 'success') {
             showTemporaryModal('Reviewer description updated!');
             closeEditModal();
             await loadPosts();
-            // If on profile page, refresh too
             const profilePage = document.getElementById('profilePage');
             if (profilePage && profilePage.classList.contains('active')) {
                 await loadProfileContent('posts');
@@ -2316,8 +2094,8 @@ async function submitEditReviewerDescription(postId) {
         showTemporaryModal('Error updating description');
     }
 }
+
 function showEditPostForm(post) {
-    // Create edit form modal
     const editModal = document.createElement('div');
     editModal.className = 'modal-overlay active';
     editModal.innerHTML = `
@@ -2368,7 +2146,6 @@ function showEditPostForm(post) {
             </div>
         </div>
     `;
-
     document.body.appendChild(editModal);
 }
 
@@ -2382,35 +2159,25 @@ function closeEditModal() {
 async function submitEditPost(postId) {
     const title = document.getElementById('editPostTitle').value;
     const content = document.getElementById('editPostContent').value;
-
     if (!title || !content) {
         showTemporaryModal('Please fill in all fields');
         return;
     }
-
     try {
         const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 title: title,
                 content: content,
                 userId: localStorage.getItem('userId')
             })
         });
-
         const data = await response.json();
-
         if (response.ok && data.status === 'success') {
             showTemporaryModal('Post updated successfully!');
             closeEditModal();
-
-            // Refresh the posts to show updated content
             await loadPosts();
-
-            // If on profile page, refresh profile content too
             const profilePage = document.getElementById('profilePage');
             if (profilePage && profilePage.classList.contains('active')) {
                 await loadProfileContent('posts');
@@ -2423,11 +2190,10 @@ async function submitEditPost(postId) {
         showTemporaryModal('Error updating post');
     }
 }
-// Delete Post Function
+
 async function deletePost(event, postId) {
     event.stopPropagation();
     closePostMenus();
-
     showConfirmModal('Are you sure you want to delete this post?', async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
@@ -2437,21 +2203,15 @@ async function deletePost(event, postId) {
                     'userId': localStorage.getItem('userId')
                 }
             });
-
             const data = await response.json();
-
             if (response.ok && data.status === 'success') {
                 showTemporaryModal('Post deleted successfully!');
-
-                // Remove post from UI
                 document.querySelectorAll(`[data-post-id="${postId}"]`).forEach(post => {
                     post.style.transition = 'opacity 0.3s, transform 0.3s';
                     post.style.opacity = '0';
                     post.style.transform = 'translateY(-20px)';
                     setTimeout(() => post.remove(), 300);
                 });
-
-                // Update profile stats if on profile page
                 const profilePage = document.getElementById('profilePage');
                 if (profilePage && profilePage.classList.contains('active')) {
                     const userId = localStorage.getItem('userId');
@@ -2467,26 +2227,20 @@ async function deletePost(event, postId) {
     });
 }
 
-// Report Post Function
 async function reportPost(event, postId) {
     event.stopPropagation();
     closePostMenus();
-
     showConfirmModal('Are you sure you want to report this post?', async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/posts/${postId}/report`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     userId: localStorage.getItem('userId'),
                     reason: 'User reported this post'
                 })
             });
-
             const data = await response.json();
-
             if (response.ok && data.status === 'success') {
                 showTemporaryModal('Post reported. Thank you for helping keep our community safe.');
             } else {
@@ -2508,7 +2262,6 @@ function updateProfilePage(user) {
     const profileUsername = document.querySelector('.profile-username');
     const profileBio = document.querySelector('.profile-bio');
     const profileMainAvatar = document.querySelector('.profile-main-avatar');
-
     if (profileName) profileName.textContent = `${user.firstName} ${user.lastName}`;
     if (profileUsername) profileUsername.textContent = `@${user.email.split('@')[0]} • ${user.email}`;
     if (profileBio && user.bio) profileBio.textContent = user.bio;
@@ -2521,57 +2274,42 @@ async function loadPostStatus(id) {
         console.log('No user ID found for loading post status');
         return;
     }
-
     try {
         console.log(`Loading post status for post ${id}, user ${userId}`);
-
         const response = await fetch(`${API_BASE_URL}/posts/${id}/status`, {
-            headers: {
-                'userId': userId
-            }
+            headers: { 'userId': userId }
         });
-
         console.log(`Status response for post ${id}:`, response.status);
-
         if (response.ok) {
             const status = await response.json();
             console.log(`Post ${id} status:`, status);
             updatePostUI(id, status);
         } else {
             console.error(`Failed to load status for post ${id}:`, response.status);
-            // Set default state
             updatePostUI(id, { isLiked: false, isSaved: false, likesCount: 0 });
         }
     } catch (error) {
         console.error('Failed to load post status:', error);
-        // Set default state on error
         updatePostUI(id, { isLiked: false, isSaved: false, likesCount: 0 });
     }
 }
 
 function updatePostUI(postId, status) {
-    // Find all post cards with this ID (could be in feed or profile)
     const postCards = document.querySelectorAll(`[data-post-id="${postId}"]`);
-
     console.log(`Updating UI for post ${postId}, found ${postCards.length} instances`);
-
     postCards.forEach((postCard, index) => {
         const likeBtn = postCard.querySelector('.like-btn');
         const saveBtn = postCard.querySelector('.save-btn');
         const likesSpan = postCard.querySelector('.post-stats span:first-child');
-
         console.log(`Instance ${index + 1}: likeBtn=${!!likeBtn}, saveBtn=${!!saveBtn}, likesSpan=${!!likesSpan}`);
-
         if (likeBtn) {
             updateLikeButton(likeBtn, status.isLiked);
             console.log(`Updated like button for post ${postId}: ${status.isLiked}`);
         }
-
         if (saveBtn) {
             updateSaveButton(saveBtn, status.isSaved);
             console.log(`Updated save button for post ${postId}: ${status.isSaved}`);
         }
-
         if (likesSpan && status.likesCount !== undefined) {
             likesSpan.textContent = `${status.likesCount} Likes`;
             console.log(`Updated likes count for post ${postId}: ${status.likesCount}`);
@@ -2584,13 +2322,11 @@ function updateLikeButton(button, isLiked) {
         console.warn('Like button not found for update');
         return;
     }
-
     const icon = button.querySelector('i');
     if (!icon) {
         console.warn('Icon not found in like button');
         return;
     }
-
     if (isLiked) {
         icon.classList.remove('bx-like');
         icon.classList.add('bxs-like');
@@ -2602,7 +2338,6 @@ function updateLikeButton(button, isLiked) {
         button.classList.remove('active');
         button.innerHTML = '<i class="bx bx-like"></i> Like';
     }
-
     console.log(`Like button updated: isLiked=${isLiked}`);
 }
 
@@ -2611,13 +2346,11 @@ function updateSaveButton(button, isSaved) {
         console.warn('Save button not found for update');
         return;
     }
-
     const icon = button.querySelector('i');
     if (!icon) {
         console.warn('Icon not found in save button');
         return;
     }
-
     if (isSaved) {
         icon.classList.remove('bx-bookmark');
         icon.classList.add('bxs-bookmark');
@@ -2629,19 +2362,16 @@ function updateSaveButton(button, isSaved) {
         button.classList.remove('active');
         button.innerHTML = '<i class="bx bx-bookmark"></i> Save';
     }
-
     console.log(`Save button updated: isSaved=${isSaved}`);
 }
 
 async function refreshAllProfilePostsStatus() {
     const profilePosts = document.querySelectorAll('#postsContent .post-card, #savedContent .post-card, #likedContent .post-card');
     console.log(`Refreshing status for ${profilePosts.length} profile posts`);
-
     for (const post of profilePosts) {
         const postId = post.getAttribute('data-post-id');
         if (postId) {
             await loadPostStatus(postId);
-            // Small delay to avoid overwhelming the server
             await new Promise(resolve => setTimeout(resolve, 100));
         }
     }
@@ -2669,7 +2399,6 @@ function formatTime(timestamp) {
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-
     if (minutes < 1) return 'Just now';
     if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
     if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
@@ -2684,7 +2413,6 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
-
 
 async function loadPosts() {
     showFeedSkeleton();
@@ -2702,9 +2430,9 @@ async function loadPosts() {
         loadOfflinePosts();
     }
 }
+
 function loadOfflinePosts() {
     const cachedPosts = localStorage.getItem('cachedPosts');
-
     if (cachedPosts) {
         const posts = JSON.parse(cachedPosts);
         renderPosts(posts);
@@ -2753,22 +2481,16 @@ document.addEventListener('click', (e) => {
     if (!profileContainer.contains(e.target)) {
         dropdown.classList.remove('active');
     }
-
-    // Auto-close sidebars when clicking outside (only on smaller screens)
     if (window.innerWidth <= 1400) {
         const leftSidebar = document.getElementById('leftSidebar');
         const rightSidebar = document.getElementById('rightSidebar');
         const toggleLeftBtn = document.getElementById('toggleLeftSidebarBtn');
         const toggleRightBtn = document.getElementById('toggleRightSidebarBtn');
-
-        // Close left sidebar if clicking outside
         if (leftSidebar && !leftSidebar.classList.contains('hidden')) {
             if (!leftSidebar.contains(e.target) && !toggleLeftBtn.contains(e.target)) {
                 leftSidebar.classList.add('hidden');
             }
         }
-
-        // Close right sidebar if clicking outside
         if (rightSidebar && !rightSidebar.classList.contains('hidden')) {
             if (!rightSidebar.contains(e.target) && !toggleRightBtn.contains(e.target)) {
                 rightSidebar.classList.add('hidden');
@@ -2787,16 +2509,13 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPosts().catch(error => {
         console.error('Failed to load posts:', error);
     });
-
     updateUserProfileCard().catch(error => {
         console.error('Failed to update profile card:', error);
     });
-
     const submitBtn = document.querySelector('.submit-post-btn');
     if (submitBtn) {
         submitBtn.addEventListener('click', submitPost);
     }
-// Add listener for scroll events on preview carousel
     document.addEventListener('scroll', (e) => {
         if (e.target.classList && e.target.classList.contains('file-previews-scroll')) {
             updatePreviewCarouselControls();
@@ -2808,7 +2527,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to load posts:', error);
         });
     });
-
     window.addEventListener('offline', () => {
         showTemporaryModal('You are currently offline');
     });
@@ -2819,13 +2537,12 @@ window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(initResponsiveSidebars, 120);
 });
+
 // ============================================
-// ENHANCED DOWNLOAD PERMISSION SYSTEM
+// DOWNLOAD PERMISSION
 // ============================================
 
-// Enhanced download function that always shows permission modal
 function requestDownloadPermission(fileUrl, filename) {
-    // Create download permission modal
     const modal = document.createElement('div');
     modal.className = 'download-permission-modal active';
     modal.innerHTML = `
@@ -2852,327 +2569,50 @@ function requestDownloadPermission(fileUrl, filename) {
             </div>
         </div>
     `;
-
     document.body.appendChild(modal);
-
-    // Close on background click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             closeDownloadPermission();
         }
     });
-
-    // Close on escape key
     document.addEventListener('keydown', handleDownloadPermissionKeydown);
 }
 
-// Enhanced file item rendering with proper download handlers
-// Enhanced file item rendering with proper download handlers
-function renderFileItem(file, post) {
-    const fullUrl = file.url;
-    const filename = getFileNameFromUrl(file.url);
-    const postTitle = escapeJsString(post.title);
-    const author = escapeJsString(`${post.user.firstName} ${post.user.lastName}`);
-
-    switch (file.type) {
-        case 'image':
-            return `
-                <div class="media-container" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'image', '${fullUrl}'); maximizeImage('${fullUrl}', '${filename}')">
-                    <img src="${fullUrl}" alt="${filename}" class="post-file-image" loading="lazy">
-                </div>
-            `;
-
-        case 'video':
-            return `
-                <div class="media-container">
-                    <video class="post-file-video" preload="metadata"
-                           onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); handleVideoClick(event, this)">
-                        <source src="${fullUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <div class="video-controls-overlay" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); maximizeVideo('${fullUrl}', '${filename}')">
-                        <button class="video-play-btn">
-                            <i class='bx bx-play'></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-
-        case 'document':
-            return `
-                <div class="post-file-document" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'document', ''); openDocumentPreview('${fullUrl}', '${filename}')">
-                    <i class='bx bx-file'></i>
-                    <div class="document-info">
-                        <div class="document-name">${filename}</div>
-                        <div class="document-type">Document</div>
-                    </div>
-                    <button class="download-btn" onclick="event.stopPropagation(); requestDownloadPermission('${fullUrl}', '${filename}')">
-                        <i class='bx bx-download'></i>
-                    </button>
-                </div>
-            `;
-
-        default:
-            return '';
-    }
-}
-// Enhanced maximize controls with download buttons
-// Enhanced maximize controls with download buttons - FIXED
-function maximizeImage(imageUrl, filename) {
-    const modal = document.createElement('div');
-    modal.className = 'image-maximize-modal active';
-    modal.innerHTML = `
-    <div class="maximized-image-container">
-        <img src="${imageUrl}" class="maximized-image" onclick="event.stopPropagation()">
-        <div class="maximize-controls">
-            <div class="maximize-controls-right">
-                <button class="maximize-btn" onclick="requestDownloadPermission('${imageUrl}', '${filename}')">
-                    <i class='bx bx-download'></i>
-                </button>
-                <button class="maximize-btn" onclick="closeMaximizedImage()">
-                    <i class='bx bx-x'></i>
-                </button>
-            </div>
-        </div>
-    </div>
-`;
-
-    document.body.appendChild(modal);
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeMaximizedImage();
-        }
-    });
-
-    document.addEventListener('keydown', handleMaximizeKeydown);
-}
-
-function closeMaximizedVideo() {
-    if (currentMaximizedVideo) {
-        currentMaximizedVideo.pause();
-        currentMaximizedVideo = null;
-    }
-
-    const modal = document.querySelector('.video-maximize-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.remove();
-            }
-        }, 300);
-    }
-    document.removeEventListener('keydown', handleVideoMaximizeKeydown);
-}
-// Initialize all video players with proper event handlers
-// ============================================
-// FIXED VIDEO PLAYBACK SYSTEM - COMPLETE FUNCTIONS
-// ============================================
-
-// Initialize all video players with proper event handlers
-function initializeVideoPlayers() {
-    document.querySelectorAll('video').forEach(video => {
-        // Remove any existing click handlers
-        video.onclick = null;
-
-        // Add simplified click handler
-        video.addEventListener('click', function(e) {
-            handleVideoClick(e, this);
-        });
-
-        // Handle video end
-        video.addEventListener('ended', function() {
-            const container = this.closest('.media-container');
-            if (container) {
-                container.classList.remove('video-playing');
-                const playBtn = container.querySelector('.video-play-btn i');
-                if (playBtn) {
-                    playBtn.className = 'bx bx-play';
-                }
-            }
-            if (currentPlayingVideo === this) {
-                currentPlayingVideo = null;
-            }
-        });
-    });
-}
-
-function updateMaximizedVideoControls(isPlaying) {
-    const playPauseIcon = document.querySelector('.video-maximize-modal .video-play-btn i');
-    if (playPauseIcon) {
-        playPauseIcon.className = isPlaying ? 'bx bx-pause' : 'bx bx-play';
-    }
-}
-
-function toggleMaximizedVideoPlay() {
-    if (!currentMaximizedVideo) return;
-
-    if (currentMaximizedVideo.paused) {
-        currentMaximizedVideo.play();
-    } else {
-        currentMaximizedVideo.pause();
-    }
-}
-
-// Enhanced video maximize with download button - FIXED VERSION
-// Enhanced video maximize with download button - FIXED VERSION
-function maximizeVideo(videoUrl, filename) {
-    // Pause any currently playing video
-    if (currentPlayingVideo) {
-        currentPlayingVideo.pause();
-        const container = currentPlayingVideo.closest('.media-container');
-        if (container) {
-            container.classList.remove('video-playing');
-            const playBtn = container.querySelector('.video-play-btn i');
-            if (playBtn) {
-                playBtn.className = 'bx bx-play';
-            }
-        }
-        currentPlayingVideo = null;
-    }
-
-    // Create video maximize modal
-    const modal = document.createElement('div');
-    modal.className = 'video-maximize-modal active';
-    modal.innerHTML = `
-        <div class="maximized-video-container">
-            <video class="maximized-video" controls autoplay>
-                <source src="${videoUrl}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-            <div class="maximize-controls">
-                <div class="maximize-controls-right">
-                    <button class="maximize-btn" onclick="requestDownloadPermission('${videoUrl}', '${filename}')">
-                        <i class='bx bx-download'></i>
-                    </button>
-                    <button class="maximize-btn" onclick="closeMaximizedVideo()">
-                        <i class='bx bx-x'></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const video = modal.querySelector('.maximized-video');
-    currentMaximizedVideo = video;
-
-    // Set up video event listeners
-    video.addEventListener('play', () => {
-        updateMaximizedVideoControls(true);
-    });
-
-    video.addEventListener('pause', () => {
-        updateMaximizedVideoControls(false);
-    });
-
-    video.addEventListener('loadeddata', () => {
-        modal.classList.remove('video-loading');
-    });
-
-    video.addEventListener('waiting', () => {
-        modal.classList.add('video-loading');
-    });
-
-    video.addEventListener('canplay', () => {
-        modal.classList.remove('video-loading');
-    });
-
-    // Close on background click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeMaximizedVideo();
-        }
-    });
-
-    // Close on escape key
-    document.addEventListener('keydown', handleVideoMaximizeKeydown);
-
-    // Auto-play the video
-    video.play().catch(error => {
-        console.error('Error auto-playing maximized video:', error);
-        // Show play button if auto-play fails
-        video.controls = true;
-    });
-}
-// New function for document preview instead of direct download
-function closeDocumentPreview() {
-    const modal = document.querySelector('.document-preview-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
-    }
-    document.removeEventListener('keydown', handleDocumentPreviewKeydown);
-}
-
-function handleDocumentPreviewKeydown(e) {
-    if (e.key === 'Escape') {
-        closeDocumentPreview();
-    }
-}
-
-// Enhanced download execution
 function confirmDownload(fileUrl, filename) {
     closeDownloadPermission();
-
-    // Add a small delay to allow modal to close
     setTimeout(() => {
         executeDownload(fileUrl, filename);
     }, 100);
 }
 
-// Enhanced download execution with Cloudinary support
-// Using your backend endpoint with proper response handling
 async function executeDownload(url, filename) {
-    // Show loading state
     const loadingModal = document.querySelector('.upload-progress-modal');
     if (!loadingModal) {
         showLoadingModal('Downloading file...');
     }
-
     try {
-        // Clean the URL
         let cleanUrl = url;
         if (cleanUrl.includes('cloudinary.com')) {
             const separator = cleanUrl.includes('?') ? '&' : '?';
             cleanUrl = `${cleanUrl}${separator}fl_attachment`;
         }
-
-        // Build the download URL with your backend
         const downloadUrl = `${API_BASE_URL}/api/download?url=${encodeURIComponent(cleanUrl)}&filename=${encodeURIComponent(filename)}`;
-
         console.log('Requesting download from:', downloadUrl);
-
-        // Make the request
         const response = await fetch(downloadUrl, {
             method: 'GET',
-            headers: {
-                'Accept': '*/*'
-            }
+            headers: { 'Accept': '*/*' }
         });
-
         if (!response.ok) {
-            // Try to get error message from response
             let errorMessage = `Download failed (${response.status})`;
             try {
                 const errorData = await response.text();
                 if (errorData) {
                     errorMessage += `: ${errorData}`;
                 }
-            } catch (e) {
-                // Ignore parsing error
-            }
+            } catch (e) {}
             throw new Error(errorMessage);
         }
-
-        // Get the blob
         const blob = await response.blob();
-
-        // Get filename from Content-Disposition header if available
         let finalFilename = filename;
         const contentDisposition = response.headers.get('content-disposition');
         if (contentDisposition) {
@@ -3181,36 +2621,24 @@ async function executeDownload(url, filename) {
                 finalFilename = filenameMatch[1].replace(/['"]/g, '');
             }
         }
-
-        // Ensure proper file extension is preserved
         if (!finalFilename.includes('.') && filename.includes('.')) {
             const ext = filename.split('.').pop();
             finalFilename = `${finalFilename}.${ext}`;
         }
-
-        // Create download link
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
         link.download = finalFilename;
         link.style.display = 'none';
         document.body.appendChild(link);
-
-        // Trigger download
         link.click();
-
-        // Clean up
         setTimeout(() => {
             document.body.removeChild(link);
             URL.revokeObjectURL(blobUrl);
         }, 2000);
-
-        // Hide loading modal
         hideLoadingModal();
         hideUploadingModal();
-
         showTemporaryModal(`Downloaded`);
-
     } catch (error) {
         console.error('Download error:', error);
         hideLoadingModal();
@@ -3219,7 +2647,10 @@ async function executeDownload(url, filename) {
     }
 }
 
-// ✅ FIXED: Add missing fields
+// ============================================
+// REVIEWER STATE & CREATOR
+// ============================================
+
 let reviewerState = {
     type: null,
     flashcards: [],
@@ -3227,32 +2658,22 @@ let reviewerState = {
     style: null,
     difficulty: null,
     sourceFileName: null,
-    sourceFileType: null,     // ✅ Added
-    sourceFileUrl: null,      // ✅ Added - This is the Cloudinary URL
-    sourceFileData: null      // ✅ Added
+    sourceFileType: null,
+    sourceFileUrl: null,
+    sourceFileData: null
 };
 
 function openReviewerCreator(event) {
     if (event) event.preventDefault();
-
-    // Close dropdown
     document.getElementById('profileDropdown')?.classList.remove('active');
-
-    // Hide both feed and profile page
     document.querySelector('.feed')?.classList.add('hidden');
     document.getElementById('profilePage')?.classList.remove('active');
-
-    // Close create post form if open
     document.getElementById('createPostForm')?.classList.remove('active');
-
-    // Create or get reviewer container
     let reviewerContainer = document.getElementById('reviewerCreatorContainer');
-
     if (!reviewerContainer) {
         reviewerContainer = document.createElement('div');
         reviewerContainer.id = 'reviewerCreatorContainer';
         reviewerContainer.className = 'reviewer-creator-container';
-
         const feed = document.querySelector('.feed');
         if (feed && feed.parentElement) {
             feed.parentElement.appendChild(reviewerContainer);
@@ -3260,8 +2681,6 @@ function openReviewerCreator(event) {
             document.body.appendChild(reviewerContainer);
         }
     }
-
-    // Show reviewer container
     reviewerContainer.classList.remove('hidden');
     reviewerContainer.innerHTML = `
         <div class="reviewer-header">
@@ -3289,30 +2708,23 @@ function openReviewerCreator(event) {
         </div>
         <div id="reviewerFormArea"></div>
     `;
-
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-function closeReviewerCreator() {
-    // Hide reviewer container
-    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
 
-    // Check what was previously visible
+function closeReviewerCreator() {
+    document.getElementById('reviewerCreatorContainer')?.classList.add('hidden');
     const profilePage = document.getElementById('profilePage');
     const feed = document.querySelector('.feed');
-
-    // If profile page was open, show it
     if (profilePage && profilePage.classList.contains('active')) {
         feed?.classList.add('hidden');
         profilePage.classList.add('active');
     } else {
-        // Otherwise show feed
         feed?.classList.remove('hidden');
     }
 }
 
 function renderFlashcardCreator() {
     const area = document.getElementById('reviewerFormArea');
-
     area.innerHTML = `
         <div class="reviewer-form">
             <div class="reviewer-form-header">
@@ -3330,7 +2742,6 @@ function renderFlashcardCreator() {
                 Add Flashcard
             </button>
             
-            <!-- ✅ Use startStudyFromReviewer() -->
             <button onclick="startStudyFromReviewer()" class="reviewer-primary-btn" style="background:#16a34a;">
                 <i class='bx bx-play-circle'></i> Start Studying
             </button>
@@ -3343,52 +2754,42 @@ function renderFlashcardCreator() {
             </button>
         </div>
     `;
-
     renderFlashcardList();
 }
 
-// ✅ Add this new function
 function startStudyFromReviewer() {
     const type = reviewerState.type;
     const items = type === 'flashcards' ? reviewerState.flashcards : reviewerState.quizQuestions;
-
     if (!items || items.length === 0) {
         showTemporaryModal('No items to study yet.');
         return;
     }
-
     const meta = {
         style: reviewerState.style || null,
         difficulty: reviewerState.difficulty || null,
         sourceFileName: reviewerState.sourceFileName || null,
         sourceFileType: reviewerState.sourceFileType || null,
-        sourceFileUrl: reviewerState.sourceFileUrl || null  // ✅ Include the URL
+        sourceFileUrl: reviewerState.sourceFileUrl || null
     };
-
     startStudySession(type, items, { meta });
 }
 
 function addFlashcard() {
     const question = document.getElementById('flashcard-question').value.trim();
     const answer = document.getElementById('flashcard-answer').value.trim();
-
     if (!question || !answer) {
         showTemporaryModal('Please fill in both question and answer.');
         return;
     }
-
     reviewerState.flashcards.push({ question, answer });
-
     document.getElementById('flashcard-question').value = '';
     document.getElementById('flashcard-answer').value = '';
-
     renderFlashcardList();
 }
 
 function renderFlashcardList() {
     const list = document.getElementById('flashcardList');
     if (!list) return;
-
     if (reviewerState.flashcards.length === 0) {
         list.innerHTML = `
             <div class="reviewer-empty-state">
@@ -3398,7 +2799,6 @@ function renderFlashcardList() {
         `;
         return;
     }
-
     list.innerHTML = reviewerState.flashcards.map((card, index) => `
         <div class="flashcard-wrapper">
             <div class="flashcard" onclick="this.classList.toggle('flipped')">
@@ -3421,15 +2821,14 @@ function renderFlashcardList() {
         </div>
     `).join('');
 }
+
 function removeFlashcard(index) {
     reviewerState.flashcards.splice(index, 1);
     renderFlashcardList();
 }
 
-// ✅ Same fix for renderQuizCreator
 function renderQuizCreator() {
     const area = document.getElementById('reviewerFormArea');
-
     area.innerHTML = `
         <div class="reviewer-form">
             <h3>Quiz Reviewer</h3>
@@ -3452,7 +2851,6 @@ function renderQuizCreator() {
                 Add Question
             </button>
             
-            <!-- ✅ Use startStudyFromReviewer() -->
             <button onclick="startStudyFromReviewer()" class="reviewer-primary-btn" style="background:#16a34a;">
                 <i class='bx bx-play-circle'></i> Start Quiz
             </button>
@@ -3464,13 +2862,12 @@ function renderQuizCreator() {
             </button>
         </div>
     `;
-
     renderQuizQuestionList();
 }
+
 function renderQuizQuestionList() {
     const list = document.getElementById('quizQuestionList');
     if (!list) return;
-
     list.innerHTML = reviewerState.quizQuestions.map((item, index) => `
         <div class="reviewer-item">
             <strong>${index + 1}. ${item.question}</strong>
@@ -3486,31 +2883,39 @@ function renderQuizQuestionList() {
     `).join('');
 }
 
-// ============================================
-// FIXED: SAVE REVIEWER FROM SESSION
-// ============================================
+function addQuizQuestion() {
+    const question = document.getElementById('quiz-question').value.trim();
+    const optionA = document.getElementById('quiz-option-a').value.trim();
+    const optionB = document.getElementById('quiz-option-b').value.trim();
+    const optionC = document.getElementById('quiz-option-c').value.trim();
+    const optionD = document.getElementById('quiz-option-d').value.trim();
+    const correctAnswer = document.getElementById('quiz-correct-answer').value;
+    if (!question || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
+        showTemporaryModal('Please complete all quiz fields.');
+        return;
+    }
+    reviewerState.quizQuestions.push({
+        question,
+        options: { A: optionA, B: optionB, C: optionC, D: optionD },
+        correctAnswer
+    });
+    renderQuizCreator();
+}
 
-// ============================================
-// FIXED: SAVE REVIEWER FROM SESSION
-// ============================================
-
-// ============================================
-// FIXED: SAVE REVIEWER FROM SESSION
-// ============================================
+function removeQuizQuestion(index) {
+    reviewerState.quizQuestions.splice(index, 1);
+    renderQuizQuestionList();
+}
 
 function saveReviewerFromSession() {
     if (!studySession) {
         showTemporaryModal('No study session active.');
         return;
     }
-
     const meta = studySession.meta || {};
-
     showDescriptionPromptModal((description) => {
         const userId = localStorage.getItem('userId') || 'guest';
         const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-
-        // ✅ Include ALL metadata including sourceFileUrl
         saved.unshift({
             id: Date.now(),
             type: studySession.type,
@@ -3518,18 +2923,16 @@ function saveReviewerFromSession() {
             style: meta.style || null,
             difficulty: meta.difficulty || null,
             sourceFileName: meta.sourceFileName || null,
-            sourceFileType: meta.sourceFileType || null,      // ✅ Added
-            sourceFileUrl: meta.sourceFileUrl || null,        // ✅ Added - CRITICAL
+            sourceFileType: meta.sourceFileType || null,
+            sourceFileUrl: meta.sourceFileUrl || null,
             description: description || 'No description provided',
             createdAt: new Date().toISOString()
         });
-
         localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
         showTemporaryModal('Reviewer saved to your profile!');
         closeStudySession();
     });
 }
-
 
 function saveReviewer() {
     if (!reviewerState.type) {
@@ -3541,12 +2944,9 @@ function saveReviewer() {
         showTemporaryModal('Please add at least one item.');
         return;
     }
-
     showDescriptionPromptModal((description) => {
         const userId = localStorage.getItem('userId') || 'guest';
         const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-
-        // Create file data for storage
         let fileData = null;
         if (reviewerState.sourceFileData) {
             const reader = new FileReader();
@@ -3554,17 +2954,13 @@ function saveReviewer() {
                 fileData = {
                     name: reviewerState.sourceFileName,
                     type: reviewerState.sourceFileType,
-                    data: e.target.result // Store as data URL
+                    data: e.target.result
                 };
-
-                // Save with file data
                 saveReviewerWithFileData(fileData, description);
             };
             reader.readAsDataURL(reviewerState.sourceFileData);
-            return; // Wait for file to be read
+            return;
         }
-
-        // No file, save directly
         saveReviewerWithFileData(null, description);
     });
 }
@@ -3578,10 +2974,9 @@ async function saveReviewerWithFileData(fileData, description) {
         difficulty: reviewerState.difficulty || null,
         sourceFileName: reviewerState.sourceFileName || null,
         sourceFileType: reviewerState.sourceFileType || null,
-        sourceFileUrl: reviewerState.sourceFileUrl || null, // ✅ the real Cloudinary link
+        sourceFileUrl: reviewerState.sourceFileUrl || null,
         description: description || 'No description provided'
     };
-
     try {
         const response = await fetch(`${API_BASE_URL}/reviewer/save`, {
             method: 'POST',
@@ -3598,7 +2993,6 @@ async function saveReviewerWithFileData(fileData, description) {
         console.error('Error saving reviewer:', error);
         showTemporaryModal('Server error while saving reviewer.');
     }
-
     reviewerState = {
         type: null, flashcards: [], quizQuestions: [], style: null,
         difficulty: null, sourceFileName: null, sourceFileType: null,
@@ -3607,6 +3001,9 @@ async function saveReviewerWithFileData(fileData, description) {
     closeReviewerCreator();
 }
 
+// ============================================
+// REVIEWER SHARING (Newsfeed)
+// ============================================
 
 const REVIEWER_POST_MARKER = '__SHAREVIEW_REVIEWER__';
 
@@ -3615,7 +3012,6 @@ async function shareReviewerFromSession() {
     const items = studySession.originalItems;
     const meta = studySession.meta || {};
     const title = 'Reviewer';
-
 
     showDescriptionPromptModalForShare(async (description) => {
         const styleLabel = ({
@@ -3639,7 +3035,6 @@ Style: ${styleLabel}${meta.difficulty ? ' • Difficulty: ' + meta.difficulty : 
 
 Tap "Start Studying" below to try it yourself!`;
 
-        // ✅ Include the Cloudinary URL in the payload
         const payload = {
             type,
             items,
@@ -3647,7 +3042,7 @@ Tap "Start Studying" below to try it yourself!`;
             difficulty: meta.difficulty || null,
             sourceFileName: meta.sourceFileName || null,
             sourceFileType: meta.sourceFileType || null,
-            sourceFileUrl: meta.sourceFileUrl || reviewerState.sourceFileUrl || null, // ✅ THIS WAS MISSING
+            sourceFileUrl: meta.sourceFileUrl || reviewerState.sourceFileUrl || null,
             generatedManually: !meta.sourceFileName,
             description: description || null
         };
@@ -3667,7 +3062,6 @@ Tap "Start Studying" below to try it yourself!`;
             });
             const data = await response.json();
             hideLoadingModal();
-
             if (response.ok && data.status === 'success') {
                 showTemporaryModal('Reviewer shared to your newsfeed!');
                 closeStudySession();
@@ -3683,11 +3077,9 @@ Tap "Start Studying" below to try it yourself!`;
     });
 }
 
-
 function showDescriptionPromptModalForShare(onConfirm) {
     const modal = document.createElement('div');
     modal.className = 'confirm-modal active';
-    // ✅ Force display with inline styles
     modal.style.cssText = `
         position: fixed !important;
         top: 0 !important;
@@ -3701,7 +3093,6 @@ function showDescriptionPromptModalForShare(onConfirm) {
         z-index: 99999 !important;
         backdrop-filter: blur(4px) !important;
     `;
-
     modal.innerHTML = `
         <div class="confirm-content" style="
             background: white;
@@ -3743,27 +3134,26 @@ function showDescriptionPromptModalForShare(onConfirm) {
         </div>
     `;
     document.body.appendChild(modal);
-
-    // Auto-focus the textarea
     const textarea = modal.querySelector('#shareReviewerDescriptionInput');
     if (textarea) {
         setTimeout(() => textarea.focus(), 100);
     }
-
-    // Handle Enter key to submit
     textarea.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             modal.querySelector('#confirmShareReviewerBtn').click();
         }
     });
-
     modal.querySelector('#confirmShareReviewerBtn').onclick = () => {
         const description = document.getElementById('shareReviewerDescriptionInput').value.trim();
         modal.remove();
         onConfirm(description);
     };
 }
+
+// ============================================
+// REVIEWER POST RENDERING & STUDY FROM POST
+// ============================================
 
 window._reviewerPostsCache = window._reviewerPostsCache || {};
 
@@ -3781,12 +3171,9 @@ function parseReviewerPostContent(content) {
 
 function renderPostBody(post) {
     const reviewerData = parseReviewerPostContent(post.content);
-
     if (reviewerData) {
         window._reviewerPostsCache[post.id] = reviewerData;
-
         let sourceFileUrl = reviewerData.sourceFileUrl || null;
-
         if (!sourceFileUrl) {
             const allFiles = [
                 ...(post.documentUrlList || []),
@@ -3802,12 +3189,10 @@ function renderPostBody(post) {
                 }
             }
         }
-
         if (sourceFileUrl) {
             reviewerData.sourceFileUrl = sourceFileUrl;
             window._reviewerPostsCache[post.id].sourceFileUrl = sourceFileUrl;
         }
-
         const styleLabel = ({
             definition: 'Definition Focused',
             conceptual: 'Conceptual',
@@ -3817,7 +3202,6 @@ function renderPostBody(post) {
         const typeLabel = reviewerData.type === 'flashcards' ? 'Flashcards' : 'Quiz';
         const typeIcon = reviewerData.type === 'flashcards' ? 'bx-card' : 'bx-question-mark';
         const hasFileUrl = !!sourceFileUrl;
-
         return `
 
             <div class="reviewer-card">
@@ -3855,7 +3239,6 @@ function renderPostBody(post) {
             ${renderFilesCarousel(post)}
         `;
     }
-
     return `
         <h3 class="post-title">${escapeHtml(post.title)}</h3>
         <div class="post-text">${detectLinks(escapeHtml(post.content))}</div>
@@ -3863,76 +3246,45 @@ function renderPostBody(post) {
     `;
 }
 
-
 function startStudyFromPost(postId) {
     const reviewerData = window._reviewerPostsCache[postId];
     if (!reviewerData) {
         showTemporaryModal('Could not load this reviewer.');
         return;
     }
-
-    // Pass the source file data if available
     const meta = {
         style: reviewerData.style,
         difficulty: reviewerData.difficulty,
         sourceFileName: reviewerData.sourceFileName,
         sourceFileType: reviewerData.sourceFileType,
         sourceFileData: reviewerData.sourceFileData,
-        sourceFileUrl: reviewerData.sourceFileUrl || null, // ✅ ADD THIS LINE
+        sourceFileUrl: reviewerData.sourceFileUrl || null,
         description: reviewerData.description
     };
-
     startStudySession(reviewerData.type, reviewerData.items, { meta });
 }
 
-function addQuizQuestion() {
-    const question = document.getElementById('quiz-question').value.trim();
-    const optionA = document.getElementById('quiz-option-a').value.trim();
-    const optionB = document.getElementById('quiz-option-b').value.trim();
-    const optionC = document.getElementById('quiz-option-c').value.trim();
-    const optionD = document.getElementById('quiz-option-d').value.trim();
-    const correctAnswer = document.getElementById('quiz-correct-answer').value;
-
-    if (!question || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
-        showTemporaryModal('Please complete all quiz fields.');
-        return;
-    }
-
-    reviewerState.quizQuestions.push({
-        question,
-        options: { A: optionA, B: optionB, C: optionC, D: optionD },
-        correctAnswer
-    });
-
-    renderQuizCreator();
-}
-
-function removeQuizQuestion(index) {
-    reviewerState.quizQuestions.splice(index, 1);
-    renderQuizQuestionList();
-}
+// ============================================
+// REVIEWER FILE UPLOAD & GENERATION
+// ============================================
 
 let uploadedReviewerText = "";
 
 function selectReviewerType(type) {
     reviewerState.type = type;
-
     document.querySelectorAll('.reviewer-type-card').forEach(card => {
         card.classList.remove('selected');
     });
-
     const selectedCard = document.querySelector(`.reviewer-type-card[data-type="${type}"]`);
     if (selectedCard) {
         selectedCard.classList.add('selected');
     }
-
     renderReviewerUploadStep(type);
 }
 
 function renderReviewerUploadStep(type) {
     const area = document.getElementById('reviewerFormArea');
     const label = type === 'flashcards' ? 'Flashcards' : 'Quiz';
-
     const fileDisplay = reviewerState.sourceFileName ? `
         <div style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:#f1f5f9; border-radius:8px; margin-top:8px;">
             <i class='bx bx-file' style="color:#4f46e5;"></i>
@@ -3943,7 +3295,6 @@ function renderReviewerUploadStep(type) {
             </button>
         </div>
     ` : '';
-
     area.innerHTML = `
         <div class="reviewer-form">
             <div class="reviewer-form-header">
@@ -4008,17 +3359,14 @@ function clearUploadedFile() {
     document.getElementById('reviewer-file-upload').value = "";
     renderReviewerUploadStep(reviewerState.type);
 }
+
 async function handleReviewerFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
-
-    // Store basic file info
     reviewerState.sourceFileName = file.name;
     reviewerState.sourceFileType = file.type;
     reviewerState.sourceFileData = file;
-
     const fileName = file.name.toLowerCase();
-
     if (fileName.endsWith('.txt')) {
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -4029,31 +3377,23 @@ async function handleReviewerFileUpload(event) {
         reader.readAsText(file);
         return;
     }
-
     if (fileName.endsWith('.pdf') || fileName.endsWith('.docx')) {
         const formData = new FormData();
         formData.append('file', file);
-
         showLoadingModal('Uploading file...');
-
         try {
             const response = await fetch(`${API_BASE_URL}/reviewer/extract-text`, {
                 method: 'POST',
                 body: formData
             });
-
             const data = await response.json();
             hideLoadingModal();
-
             if (response.ok && data.status === 'success') {
-                // ✅ CRITICAL: Store the Cloudinary URL
                 reviewerState.sourceFileUrl = data.fileUrl;
                 reviewerState.sourceFileName = data.fileName || file.name;
                 reviewerState.sourceFileType = data.fileType || file.type;
-
                 uploadedReviewerText = data.text || '';
                 document.getElementById('reviewer-source-text').value = uploadedReviewerText;
-
                 console.log('✅ File uploaded to Cloudinary:', reviewerState.sourceFileUrl);
                 showTemporaryModal('File uploaded successfully!');
             } else {
@@ -4066,7 +3406,6 @@ async function handleReviewerFileUpload(event) {
         }
         return;
     }
-
     showTemporaryModal('Please upload a .txt, .pdf, or .docx file.');
 }
 
@@ -4075,7 +3414,6 @@ async function autoGenerateReviewer() {
     const difficulty = document.getElementById('reviewer-difficulty')?.value || 'medium';
     const count = Number(document.getElementById('reviewer-count')?.value || 10);
     const style = document.getElementById('reviewer-style')?.value || 'conceptual';
-
     if (!sourceText) {
         showTemporaryModal('Please upload or paste reviewer content first.');
         return;
@@ -4084,12 +3422,9 @@ async function autoGenerateReviewer() {
         showTemporaryModal('Please select reviewer type first.');
         return;
     }
-
     reviewerState.style = style;
     reviewerState.difficulty = difficulty;
-
     showLoadingModal('Creating reviewer with AI...');
-
     try {
         const response = await fetch(`${API_BASE_URL}/reviewer/generate`, {
             method: 'POST',
@@ -4100,21 +3435,17 @@ async function autoGenerateReviewer() {
                 difficulty,
                 count,
                 style,
-                // ✅ Pass the Cloudinary URL
                 sourceFileUrl: reviewerState.sourceFileUrl,
                 sourceFileName: reviewerState.sourceFileName,
                 sourceFileType: reviewerState.sourceFileType
             })
         });
-
         const data = await response.json();
         hideLoadingModal();
-
         if (!response.ok || data.status !== 'success') {
             showTemporaryModal(data.message || 'Failed to generate reviewer.');
             return;
         }
-
         if (reviewerState.type === 'flashcards') {
             reviewerState.flashcards = data.items;
             renderFlashcardCreator();
@@ -4131,102 +3462,8 @@ async function autoGenerateReviewer() {
     }
 }
 
-function generateFlashcardsFromText(text) {
-    const sentences = splitTextIntoSentences(text);
-    const flashcards = [];
-
-    sentences.forEach(sentence => {
-        const cleanSentence = sentence.trim();
-
-        if (cleanSentence.length < 25) return;
-
-        if (cleanSentence.includes(' is ')) {
-            const parts = cleanSentence.split(' is ');
-            const term = parts[0].trim();
-            const definition = parts.slice(1).join(' is ').trim();
-
-            if (term && definition) {
-                flashcards.push({
-                    question: `What is ${term}?`,
-                    answer: definition
-                });
-            }
-        } else if (cleanSentence.includes(' are ')) {
-            const parts = cleanSentence.split(' are ');
-            const term = parts[0].trim();
-            const definition = parts.slice(1).join(' are ').trim();
-
-            flashcards.push({
-                question: `What are ${term}?`,
-                answer: definition
-            });
-        } else {
-            flashcards.push({
-                question: `Explain: ${cleanSentence.substring(0, 60)}...`,
-                answer: cleanSentence
-            });
-        }
-    });
-
-    return flashcards.slice(0, 20);
-}
-
-function generateQuizFromText(text) {
-    const sentences = splitTextIntoSentences(text).filter(sentence => sentence.length >= 30);
-    const quizQuestions = [];
-
-    sentences.forEach((sentence, index) => {
-        const cleanSentence = sentence.trim();
-        const words = cleanSentence.split(' ').filter(word => word.length > 4);
-
-        if (words.length < 4) return;
-
-        const answer = words[Math.floor(words.length / 2)]
-            .replace(/[^\w]/g, '');
-
-        if (!answer) return;
-
-        const questionText = cleanSentence.replace(answer, '_____');
-
-        const wrongAnswers = getRandomWrongAnswers(sentences, answer);
-
-        quizQuestions.push({
-            question: `Complete the statement: ${questionText}`,
-            options: {
-                A: answer,
-                B: wrongAnswers[0] || 'None of the above',
-                C: wrongAnswers[1] || 'All of the above',
-                D: wrongAnswers[2] || 'Not related'
-            },
-            correctAnswer: 'A'
-        });
-    });
-
-    return quizQuestions.slice(0, 15);
-}
-
-function splitTextIntoSentences(text) {
-    return text
-        .replace(/\n+/g, ' ')
-        .split(/[.!?]+/)
-        .map(sentence => sentence.trim())
-        .filter(sentence => sentence.length > 0);
-}
-
-function getRandomWrongAnswers(sentences, correctAnswer) {
-    const words = sentences
-        .join(' ')
-        .split(' ')
-        .map(word => word.replace(/[^\w]/g, ''))
-        .filter(word => word.length > 4 && word.toLowerCase() !== correctAnswer.toLowerCase());
-
-    return [...new Set(words)]
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3);
-}
-
 // ============================================
-// RECENTLY VISITED POSTS (Right Sidebar)
+// RECENTLY VISITED POSTS
 // ============================================
 
 function escapeJsString(str) {
@@ -4235,20 +3472,16 @@ function escapeJsString(str) {
 
 function recordRecentVisit(postId, title, author, type, thumbnailUrl) {
     let recent = JSON.parse(localStorage.getItem('recentlyVisitedPosts') || '[]');
-
-    // Remove any existing entry for this post so it moves to the top
     recent = recent.filter(item => item.postId !== postId);
-
     recent.unshift({
         postId,
         title,
         author,
-        type, // 'image' | 'video' | 'document'
+        type,
         thumbnailUrl,
         visitedAt: new Date().toISOString()
     });
-
-    recent = recent.slice(0, 10); // keep the 10 most recent
+    recent = recent.slice(0, 10);
     localStorage.setItem('recentlyVisitedPosts', JSON.stringify(recent));
     renderRecentVisitedSidebar();
 }
@@ -4276,9 +3509,7 @@ function goToPost(postId) {
 function renderRecentVisitedSidebar() {
     const container = document.getElementById('recentPostsCard');
     if (!container) return;
-
     const recent = JSON.parse(localStorage.getItem('recentlyVisitedPosts') || '[]');
-
     if (recent.length === 0) {
         container.innerHTML = `
             <div class="sidebar-header"><div class="section-title">Recent Posts Visited</div></div>
@@ -4290,9 +3521,7 @@ function renderRecentVisitedSidebar() {
         `;
         return;
     }
-
     const iconForType = { image: 'bx-image', video: 'bx-video', document: 'bx-file' };
-
     container.innerHTML = `
         <div class="sidebar-header"><div class="section-title">Recent Posts Visited</div></div>
         ${recent.map(item => `
@@ -4315,7 +3544,7 @@ function renderRecentVisitedSidebar() {
 }
 
 // ============================================
-// STUDY SESSION (Stacked Flashcards & Quiz)
+// STUDY SESSION
 // ============================================
 
 let studySession = null;
@@ -4326,17 +3555,12 @@ function startStudySession(type, items, options = {}) {
         showTemporaryModal('No items to study yet.');
         return;
     }
-
-    // ✅ Preserve the URL
     let preservedMeta = meta || {};
-
-    // If meta doesn't have the URL, get it from reviewerState
     if (!preservedMeta.sourceFileUrl && reviewerState.sourceFileUrl) {
         preservedMeta.sourceFileUrl = reviewerState.sourceFileUrl;
         preservedMeta.sourceFileName = reviewerState.sourceFileName;
         preservedMeta.sourceFileType = reviewerState.sourceFileType;
     }
-
     studySession = {
         type,
         originalItems: resetOriginal ? items.slice() : (studySession ? studySession.originalItems : items.slice()),
@@ -4346,7 +3570,7 @@ function startStudySession(type, items, options = {}) {
         flipped: false,
         selectedOption: null,
         locked: false,
-        meta: preservedMeta  // ✅ Contains the URL
+        meta: preservedMeta
     };
     openStudyModal();
     renderStudyCard();
@@ -4392,7 +3616,6 @@ function renderStudyCard() {
     studySession.type === 'flashcards' ? renderFlashcardStudyCard(item) : renderQuizStudyCard(item);
 }
 
-// ---- FLASHCARDS ----
 function renderFlashcardStudyCard(item) {
     studySession.flipped = false;
     document.getElementById('studyStack').innerHTML = `
@@ -4417,7 +3640,6 @@ function flipStudyFlashcard() {
     studySession.flipped = !studySession.flipped;
     const item = studySession.items[studySession.index];
     const face = document.getElementById('flashcardStudyFace');
-
     if (studySession.flipped) {
         face.classList.add('answer-face');
         face.innerHTML = `
@@ -4445,7 +3667,6 @@ function flipStudyFlashcard() {
     }
 }
 
-// ---- QUIZ ----
 function renderQuizStudyCard(item) {
     studySession.selectedOption = null;
     studySession.locked = false;
@@ -4472,12 +3693,12 @@ function renderQuizStudyCard(item) {
         </div>
     `;
 }
+
 function selectQuizOption(letter) {
     if (!studySession || studySession.locked) return;
     const item = studySession.items[studySession.index];
     studySession.selectedOption = letter;
     studySession.locked = true;
-
     document.querySelectorAll('.quiz-option-btn').forEach(btn => {
         btn.disabled = true;
         const btnLetter = btn.dataset.letter;
@@ -4485,8 +3706,6 @@ function selectQuizOption(letter) {
         else if (btnLetter === letter) btn.classList.add('wrong-answer');
         if (btnLetter === letter) btn.classList.add('selected');
     });
-
-    // Reveal explanation if the AI provided one
     const explanationSlot = document.getElementById('quizExplanationSlot');
     if (explanationSlot && item.explanation) {
         explanationSlot.innerHTML = `
@@ -4496,7 +3715,6 @@ function selectQuizOption(letter) {
             </div>
         `;
     }
-
     const isCorrect = letter === item.correctAnswer;
     document.getElementById('studyControls').innerHTML = `
         <div class="study-controls-row">
@@ -4509,7 +3727,7 @@ function selectQuizOption(letter) {
         </div>
     `;
 }
-// ---- SHARED NAV ----
+
 function studyAnswer(isCorrect) {
     studySession.results.push({ item: studySession.items[studySession.index], status: isCorrect ? 'correct' : 'wrong' });
     studySession.index++;
@@ -4535,7 +3753,6 @@ function renderStudySummary() {
     const skipped = studySession.results.filter(r => r.status === 'skipped').length;
     const total = studySession.results.length;
     const pct = total ? Math.round((correct / total) * 100) : 0;
-
     document.getElementById('studyStack').innerHTML = `
         <div class="study-summary">
             <i class='bx bx-trophy' style="font-size:48px;color:#4f46e5;"></i>
@@ -4551,7 +3768,6 @@ function renderStudySummary() {
             </div>
         </div>
     `;
-
     const hasWrong = wrong > 0 || skipped > 0;
     document.getElementById('studyControls').innerHTML = `
         <div class="study-summary-actions">
@@ -4579,6 +3795,10 @@ function retryWrongOnly() {
     });
 }
 
+// ============================================
+// MY REVIEWERS (Saved Reviewers)
+// ============================================
+
 async function openMyReviewers() {
     const userId = localStorage.getItem('userId') || 'guest';
     let list = [];
@@ -4594,7 +3814,7 @@ async function openMyReviewers() {
                 difficulty: r.difficulty,
                 sourceFileName: r.sourceFileName,
                 sourceFileType: r.sourceFileType,
-                sourceFileUrl: r.sourceFileUrl, // ✅ always present if uploaded successfully
+                sourceFileUrl: r.sourceFileUrl,
                 description: r.description
             }));
         }
@@ -4608,7 +3828,6 @@ async function openMyReviewers() {
         exam: 'Exam Style',
         identification: 'Identification'
     })[s] || 'Conceptual';
-
     const modal = document.createElement('div');
     modal.className = 'modal-overlay active';
     modal.innerHTML = `
@@ -4631,7 +3850,6 @@ async function openMyReviewers() {
             const typeLabel = r.type === 'flashcards' ? 'Flashcards' : 'Quiz';
             const styleText = styleLabel(r.style);
             const hasFileUrl = !!r.sourceFileUrl;
-
             return `
         <div class="reviewer-card">
             <div class="reviewer-card-top">
@@ -4679,13 +3897,13 @@ async function openMyReviewers() {
     `;
     document.body.appendChild(modal);
 }
+
 function editSavedReviewerDescription(id) {
     const reviewer = (window._savedReviewersCache || []).find(r => r.id === id);
     if (!reviewer) {
         showTemporaryModal('Reviewer not found.');
         return;
     }
-
     const modal = document.createElement('div');
     modal.className = 'modal-overlay active';
     modal.innerHTML = `
@@ -4713,7 +3931,6 @@ function editSavedReviewerDescription(id) {
 
 async function updateSavedReviewerDescription(id) {
     const description = document.getElementById('editSavedReviewerDescription').value.trim();
-
     try {
         const response = await fetch(`${API_BASE_URL}/reviewer/${id}/description`, {
             method: 'PUT',
@@ -4726,10 +3943,10 @@ async function updateSavedReviewerDescription(id) {
         console.error('Failed to update description:', error);
         showTemporaryModal('Failed to update description.');
     }
-
     document.querySelector('.modal-overlay.active')?.remove();
     openMyReviewers();
 }
+
 function downloadSavedReviewerFile(id) {
     const reviewer = (window._savedReviewersCache || []).find(r => r.id === id);
     if (!reviewer || !reviewer.sourceFileUrl) {
@@ -4743,15 +3960,13 @@ function studyFromSaved(id) {
     const r = (window._savedReviewersCache || []).find(x => x.id === id);
     if (!r) return;
     document.querySelector('.modal-overlay.active')?.remove();
-
-    // ✅ Pass ALL metadata including sourceFileUrl
     startStudySession(r.type, r.items, {
         meta: {
             style: r.style,
             difficulty: r.difficulty,
             sourceFileName: r.sourceFileName,
             sourceFileType: r.sourceFileType,
-            sourceFileUrl: r.sourceFileUrl || null,  // ✅ Include URL
+            sourceFileUrl: r.sourceFileUrl || null,
             description: r.description
         }
     });
@@ -4767,11 +3982,18 @@ async function deleteSavedReviewer(id) {
     openMyReviewers();
 }
 
+// ============================================
+// SCROLL TO TOP
+// ============================================
 
 document.getElementById('scrollToTopBtn')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 window.addEventListener('scroll', () => {
     document.getElementById('scrollToTopBtn')?.classList.toggle('visible', window.scrollY > 300);
 });
+
+// ============================================
+// DESCRIPTION PROMPT MODAL (Generic)
+// ============================================
 
 function showDescriptionPromptModal(onConfirm) {
     const modal = document.createElement('div');
@@ -4795,33 +4017,30 @@ function showDescriptionPromptModal(onConfirm) {
     };
 }
 
+// ============================================
+// DOWNLOAD SOURCE FILE (From Post)
+// ============================================
+
 function downloadSourceFile(postId) {
     const reviewerData = window._reviewerPostsCache[postId];
     if (!reviewerData || !reviewerData.sourceFileName) {
         showTemporaryModal('No source file available for this reviewer.');
         return;
     }
-
     console.log(`=== Downloading source file for post ${postId} ===`);
     console.log('Reviewer data:', reviewerData);
-
-    // Check if we have the URL stored
     if (reviewerData.sourceFileUrl) {
         requestDownloadPermission(reviewerData.sourceFileUrl, reviewerData.sourceFileName);
         return;
     }
-
-    // If not stored, try to find in cached posts
     const cachedPosts = JSON.parse(localStorage.getItem('cachedPosts') || '[]');
     const post = cachedPosts.find(p => p.id === postId);
-
     if (post) {
         const allFiles = [
             ...(post.documentUrlList || []),
             ...(post.imageUrlList || []),
             ...(post.videoUrlList || [])
         ];
-
         for (const url of allFiles) {
             const filename = getFileNameFromUrl(url);
             if (filename === reviewerData.sourceFileName ||
@@ -4831,22 +4050,21 @@ function downloadSourceFile(postId) {
             }
         }
     }
-
-    // If still not found
     showTemporaryModal('Source file not found. It may have been removed.');
 }
 
+// ============================================
+// UTILITY – TRUNCATE FILENAME
+// ============================================
+
 function truncateFilename(filename, maxLength = 20) {
     if (!filename || filename.length <= maxLength) return filename;
-
     const lastDot = filename.lastIndexOf('.');
-    const hasExt = lastDot > 0 && lastDot > filename.length - 8; // avoid weird cases
+    const hasExt = lastDot > 0 && lastDot > filename.length - 8;
     const ext = hasExt ? filename.slice(lastDot) : '';
     const base = hasExt ? filename.slice(0, lastDot) : filename;
-
-    const keep = maxLength - ext.length - 3; // 3 for "..."
+    const keep = maxLength - ext.length - 3;
     if (keep <= 0) return filename.slice(0, maxLength) + '…';
-
     return base.slice(0, keep) + '…' + ext;
 }
 
@@ -4900,19 +4118,6 @@ window.handleReviewerFileUpload = handleReviewerFileUpload;
 window.autoGenerateReviewer = autoGenerateReviewer;
 window.renderFlashcardCreator = renderFlashcardCreator;
 window.renderQuizCreator = renderQuizCreator;
-window.selectReviewerType = selectReviewerType;
-window.openReviewerCreator = openReviewerCreator;
-window.closeReviewerCreator = closeReviewerCreator;
-window.selectReviewerType = selectReviewerType;
-window.renderFlashcardCreator = renderFlashcardCreator;
-window.renderQuizCreator = renderQuizCreator;
-window.addFlashcard = addFlashcard;
-window.removeFlashcard = removeFlashcard;
-window.addQuizQuestion = addQuizQuestion;
-window.removeQuizQuestion = removeQuizQuestion;
-window.saveReviewer = saveReviewer;
-window.handleReviewerFileUpload = handleReviewerFileUpload;
-window.autoGenerateReviewer = autoGenerateReviewer;
 window.recordRecentVisit = recordRecentVisit;
 window.removeRecentVisit = removeRecentVisit;
 window.goToPost = goToPost;
