@@ -3836,3 +3836,169 @@ body {
     overflow-wrap: break-word;  /* ✅ Wrap long words */
     box-sizing: border-box;
 }
+
+/* ============================================
+   REVIEWER CARD — modern, minimal
+   ============================================ */
+.reviewer-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: #fafafa;
+}
+
+.reviewer-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.reviewer-icon {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: #4f46e5;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.reviewer-meta {
+    min-width: 0;
+}
+
+.reviewer-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: #111827;
+    line-height: 1.3;
+}
+
+.reviewer-sub {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reviewer-desc {
+    font-size: 13px;
+    color: #4b5563;
+    margin: 0 0 10px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.reviewer-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.reviewer-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 60%;
+    padding: 5px 10px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.reviewer-file-chip:hover:not(.disabled) {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.reviewer-file-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.reviewer-file-chip i {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.reviewer-file-chip-icon {
+    color: #4f46e5;
+}
+
+.reviewer-file-chip.disabled {
+    color: #9ca3af;
+    cursor: default;
+    opacity: 0.7;
+}
+
+.reviewer-manual-tag {
+    font-size: 12px;
+    color: #6b7280;
+    padding: 5px 10px;
+}
+
+.reviewer-study-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.reviewer-study-btn:hover {
+    background: #4338ca;
+}
+
+.reviewer-study-btn i {
+    font-size: 15px;
+}
+
+.reviewer-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.reviewer-icon-btn:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.reviewer-icon-btn.danger:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}

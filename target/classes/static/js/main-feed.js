@@ -3569,27 +3569,41 @@ function saveReviewer() {
     });
 }
 
-function saveReviewerWithFileData(fileData, description) {
-    const userId = localStorage.getItem('userId') || 'guest';
-    const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-
-    saved.unshift({
-        id: Date.now(),
+async function saveReviewerWithFileData(fileData, description) {
+    const payload = {
+        userId: localStorage.getItem('userId'),
         type: reviewerState.type,
         items: reviewerState.type === 'flashcards' ? reviewerState.flashcards : reviewerState.quizQuestions,
         style: reviewerState.style || null,
         difficulty: reviewerState.difficulty || null,
         sourceFileName: reviewerState.sourceFileName || null,
         sourceFileType: reviewerState.sourceFileType || null,
-        sourceFileData: fileData, // Store file as data URL
-        generatedManually: !reviewerState.sourceFileName,
-        description: description || 'No description provided',
-        createdAt: new Date().toISOString()
-    });
-    localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
+        sourceFileUrl: reviewerState.sourceFileUrl || null, // ✅ the real Cloudinary link
+        description: description || 'No description provided'
+    };
 
-    showTemporaryModal('Reviewer saved successfully!');
-    reviewerState = { type: null, flashcards: [], quizQuestions: [], style: null, difficulty: null, sourceFileName: null, sourceFileType: null, sourceFileData: null };
+    try {
+        const response = await fetch(`${API_BASE_URL}/reviewer/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (response.ok && data.status === 'success') {
+            showTemporaryModal('Reviewer saved successfully!');
+        } else {
+            showTemporaryModal(data.message || 'Failed to save reviewer.');
+        }
+    } catch (error) {
+        console.error('Error saving reviewer:', error);
+        showTemporaryModal('Server error while saving reviewer.');
+    }
+
+    reviewerState = {
+        type: null, flashcards: [], quizQuestions: [], style: null,
+        difficulty: null, sourceFileName: null, sourceFileType: null,
+        sourceFileUrl: null, sourceFileData: null
+    };
     closeReviewerCreator();
 }
 
@@ -3771,24 +3785,17 @@ function renderPostBody(post) {
     if (reviewerData) {
         window._reviewerPostsCache[post.id] = reviewerData;
 
-        // ✅ First check: Is the URL in the payload?
         let sourceFileUrl = reviewerData.sourceFileUrl || null;
 
-        console.log('🔍 Looking for file URL for post', post.id);
-        console.log('  - From payload:', sourceFileUrl);
-
-        // ✅ Second check: Try to find in attachments
         if (!sourceFileUrl) {
             const allFiles = [
                 ...(post.documentUrlList || []),
                 ...(post.imageUrlList || []),
                 ...(post.videoUrlList || [])
             ];
-
             if (reviewerData.sourceFileName && allFiles.length > 0) {
                 for (const url of allFiles) {
-                    const filename = getFileNameFromUrl(url);
-                    if (filename === reviewerData.sourceFileName) {
+                    if (getFileNameFromUrl(url) === reviewerData.sourceFileName) {
                         sourceFileUrl = url;
                         break;
                     }
@@ -3796,81 +3803,54 @@ function renderPostBody(post) {
             }
         }
 
-        // ✅ Store the URL for download
         if (sourceFileUrl) {
             reviewerData.sourceFileUrl = sourceFileUrl;
             window._reviewerPostsCache[post.id].sourceFileUrl = sourceFileUrl;
-            console.log('✅ Found source file URL:', sourceFileUrl);
         }
 
         const styleLabel = ({
             definition: 'Definition Focused',
             conceptual: 'Conceptual',
-            exam: 'Exam Style',
+            exam: 'Exam style',
             identification: 'Identification'
         })[reviewerData.style] || 'Conceptual';
         const typeLabel = reviewerData.type === 'flashcards' ? 'Flashcards' : 'Quiz';
         const typeIcon = reviewerData.type === 'flashcards' ? 'bx-card' : 'bx-question-mark';
-
-        // Determine source info display with download button
-        let sourceDisplay = '';
-        if (reviewerData.sourceFileName) {
-            const hasFileUrl = !!sourceFileUrl;
-            sourceDisplay = `
-                <span class="reviewer-tag source-tag" style="background:#6b7280; padding:6px 12px; border-radius:20px; font-size:13px; display:inline-flex; align-items:center; gap:8px; color:white;">
-                    ${escapeHtml(reviewerData.sourceFileName)}
-                    <button onclick="event.stopPropagation(); downloadSourceFile(${post.id})" 
-                            style="background:${hasFileUrl ? 'white' : '#ef4444'}; border:none; border-radius:6px; padding:4px 10px; cursor:${hasFileUrl ? 'pointer' : 'default'}; font-size:12px; color:${hasFileUrl ? '#4f46e5' : 'white'}; font-weight:600; transition:all 0.2s; white-space:nowrap;" 
-                            ${hasFileUrl ? `onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='white'"` : ''}>
-                        ${hasFileUrl ? 'Download' : 'File unavailable'}
-                    </button>
-                </span>
-            `;
-        } else {
-            sourceDisplay = `
-                <span class="reviewer-tag manual-tag" style="background:#8b5cf6; padding:6px 14px; border-radius:20px; font-size:13px; color:white; display:inline-block;">
-                    Generated Manually
-                </span>
-            `;
-        }
+        const hasFileUrl = !!sourceFileUrl;
 
         return `
-            <h3 class="post-title">${escapeHtml(post.title)}</h3>
-            <div class="reviewer-item" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #e2e8f0; transition: all 0.3s ease;">
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #4f46e5; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink:0;">
-                        <i class='bx ${typeIcon}'></i>
-                    </div>
-                    <div>
-                        <div style="font-weight: 600; color: #1e293b; font-size: 16px;">${typeLabel} Reviewer</div>
-                        <div style="color: #64748b; font-size: 13px;">${reviewerData.items.length} items</div>
+
+            <div class="reviewer-card">
+                <div class="reviewer-card-top">
+                    <div class="reviewer-icon"><i class='bx ${typeIcon}'></i></div>
+                    <div class="reviewer-meta">
+                        <div class="reviewer-title">${typeLabel} Reviewer</div>
+                        <div class="reviewer-sub">${reviewerData.items.length} items · ${styleLabel}${reviewerData.difficulty ? ' · ' + escapeHtml(reviewerData.difficulty) : ''}</div>
                     </div>
                 </div>
-                
+
                 ${reviewerData.description ? `
-                    <div style="color: #475569; font-size: 14px; margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px; border-left: 3px solid #4f46e5;">
-                        ${escapeHtml(reviewerData.description)}
-                    </div>
+                    <p class="reviewer-desc">${escapeHtml(reviewerData.description)}</p>
                 ` : ''}
-                
-                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center;">
-                    <span class="reviewer-tag" style="background:#4f46e5; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; display:inline-block;">${styleLabel}</span>
-                    ${reviewerData.difficulty ? `<span class="reviewer-tag" style="background:#f59e0b; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; display:inline-block;">${escapeHtml(reviewerData.difficulty)}</span>` : ''}
-                    ${sourceDisplay}
-                </div>
-                
-                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <button onclick="startStudyFromPost(${post.id})" style="flex:1; padding: 10px 16px; background: #4f46e5; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; min-width:120px;">
-                        <i class='bx bx-play-circle'></i> Study
+
+                <div class="reviewer-card-footer">
+                    ${reviewerData.sourceFileName ? `
+                        <button class="reviewer-file-chip ${hasFileUrl ? '' : 'disabled'}"
+                                onclick="event.stopPropagation(); ${hasFileUrl ? `downloadSourceFile(${post.id})` : ''}"
+                                title="${escapeHtml(reviewerData.sourceFileName)}"
+                                ${hasFileUrl ? '' : 'disabled'}>
+                            <i class='bx bx-file'></i>
+                            <span>${escapeHtml(truncateFilename(reviewerData.sourceFileName, 16))}</span>
+                            ${hasFileUrl ? `<i class='bx bx-download reviewer-file-chip-icon'></i>` : ''}
+                        </button>
+                    ` : `
+                        <span class="reviewer-manual-tag">Manually created</span>
+                    `}
+
+                    <button class="reviewer-study-btn" onclick="startStudyFromPost(${post.id})">
+                        Study <i class='bx bx-right-arrow-alt'></i>
                     </button>
                 </div>
-            </div>
-            ${renderFilesCarousel(post)}
-        `;
-        return `
-            <!-- ✅ Remove the title display -->
-            <div class="reviewer-item" ...>
-                ...
             </div>
             ${renderFilesCarousel(post)}
         `;
@@ -3898,6 +3878,7 @@ function startStudyFromPost(postId) {
         sourceFileName: reviewerData.sourceFileName,
         sourceFileType: reviewerData.sourceFileType,
         sourceFileData: reviewerData.sourceFileData,
+        sourceFileUrl: reviewerData.sourceFileUrl || null, // ✅ ADD THIS LINE
         description: reviewerData.description
     };
 
@@ -4598,10 +4579,29 @@ function retryWrongOnly() {
     });
 }
 
-function openMyReviewers() {
+async function openMyReviewers() {
     const userId = localStorage.getItem('userId') || 'guest';
-    window._savedReviewersCache = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-    const list = window._savedReviewersCache;
+    let list = [];
+    try {
+        const response = await fetch(`${API_BASE_URL}/reviewer/user/${userId}`);
+        if (response.ok) {
+            const raw = await response.json();
+            list = raw.map(r => ({
+                id: r.id,
+                type: r.type,
+                items: JSON.parse(r.itemsJson),
+                style: r.style,
+                difficulty: r.difficulty,
+                sourceFileName: r.sourceFileName,
+                sourceFileType: r.sourceFileType,
+                sourceFileUrl: r.sourceFileUrl, // ✅ always present if uploaded successfully
+                description: r.description
+            }));
+        }
+    } catch (error) {
+        console.error('Failed to load reviewers:', error);
+    }
+    window._savedReviewersCache = list;
     const styleLabel = (s) => ({
         definition: 'Definition Focused',
         conceptual: 'Conceptual',
@@ -4627,66 +4627,51 @@ function openMyReviewers() {
                         <div class="empty-state-subtext" style="font-size:14px;color:#94a3b8;margin-top:4px;">Create and save reviewers to see them here</div>
                     </div>`
         : list.map(r => {
-            // Determine source display with download button
-            let sourceDisplay = '';
-            if (r.sourceFileName) {
-                sourceDisplay = `
-                                <span class="reviewer-tag source-tag" style="background:#6b7280; padding:6px 12px; border-radius:20px; font-size:13px; display:inline-flex; align-items:center; gap:8px; color:white;">
-                                    ${escapeHtml(r.sourceFileName)}
-                                    <button onclick="downloadSavedReviewerFile(${r.id})" 
-                                            style="background:white; border:none; border-radius:6px; padding:4px 10px; cursor:pointer; font-size:12px; color:#4f46e5; font-weight:600; transition:all 0.2s; white-space:nowrap;" 
-                                            onmouseover="this.style.background='#e0e7ff'" 
-                                            onmouseout="this.style.background='white'">
-                                        Download
-                                    </button>
-                                </span>
-                            `;
-            } else {
-                sourceDisplay = `
-                                <span class="reviewer-tag manual-tag" style="background:#8b5cf6; padding:6px 14px; border-radius:20px; font-size:13px; color:white; display:inline-block;">
-                                    Generated Manually
-                                </span>
-                            `;
-            }
-
             const typeIcon = r.type === 'flashcards' ? 'bx-card' : 'bx-question-mark';
             const typeLabel = r.type === 'flashcards' ? 'Flashcards' : 'Quiz';
+            const styleText = styleLabel(r.style);
+            const hasFileUrl = !!r.sourceFileUrl;
 
             return `
-                            <div class="reviewer-item" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #e2e8f0; transition: all 0.3s ease;">
-                                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #4f46e5; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; flex-shrink:0;">
-                                        <i class='bx ${typeIcon}'></i>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 600; color: #1e293b; font-size: 16px;">${typeLabel} Reviewer</div>
-                                        <div style="color: #64748b; font-size: 13px;">${r.items.length} items</div>
-                                    </div>
-                                </div>
-                                
-                                <div style="color: #475569; font-size: 14px; margin-bottom: 12px; padding: 12px; background: white; border-radius: 8px; border-left: 3px solid #4f46e5;">
-                                    ${escapeHtml(r.description || 'No description provided')}
-                                </div>
-                                
-                                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center;">
-                                    <span class="reviewer-tag" style="background:#4f46e5; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; display:inline-block;">${styleLabel(r.style)}</span>
-                                    ${r.difficulty ? `<span class="reviewer-tag" style="background:#f59e0b; color: white; padding: 6px 14px; border-radius: 20px; font-size: 13px; display:inline-block;">${escapeHtml(r.difficulty)}</span>` : ''}
-                                    ${sourceDisplay}
-                                </div>
-                                
-                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    <button onclick="studyFromSaved(${r.id})" style="flex:1; padding: 10px 16px; background: #4f46e5; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; min-width:120px;">
-                                        <i class='bx bx-play-circle'></i> Study
-                                    </button>
-                                    <button onclick="editSavedReviewerDescription(${r.id})" style="padding: 10px 16px; background: #f59e0b; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                        <i class='bx bx-edit'></i> Edit
-                                    </button>
-                                    <button onclick="deleteSavedReviewer(${r.id})" style="padding: 10px 16px; background: #ef4444; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                        <i class='bx bx-trash'></i> Delete
-                                    </button>
-                                </div>
-                            </div>
-                        `;
+        <div class="reviewer-card">
+            <div class="reviewer-card-top">
+                <div class="reviewer-icon"><i class='bx ${typeIcon}'></i></div>
+                <div class="reviewer-meta">
+                    <div class="reviewer-title">${typeLabel} Reviewer</div>
+                    <div class="reviewer-sub">${r.items.length} items · ${styleText}${r.difficulty ? ' · ' + escapeHtml(r.difficulty) : ''}</div>
+                </div>
+            </div>
+
+            ${r.description ? `<p class="reviewer-desc">${escapeHtml(r.description)}</p>` : ''}
+
+            <div class="reviewer-card-footer">
+                ${r.sourceFileName ? `
+                    <button class="reviewer-file-chip ${hasFileUrl ? '' : 'disabled'}"
+                            onclick="${hasFileUrl ? `downloadSavedReviewerFile(${r.id})` : ''}"
+                            title="${escapeHtml(r.sourceFileName)}"
+                            ${hasFileUrl ? '' : 'disabled'}>
+                        <i class='bx bx-file'></i>
+                        <span>${escapeHtml(truncateFilename(r.sourceFileName, 16))}</span>
+                        ${hasFileUrl ? `<i class='bx bx-download reviewer-file-chip-icon'></i>` : ''}
+                    </button>
+                ` : `
+                    <span class="reviewer-manual-tag">Manually created</span>
+                `}
+
+                <div style="display:flex; gap:6px;">
+                    <button class="reviewer-icon-btn" onclick="editSavedReviewerDescription(${r.id})" title="Edit">
+                        <i class='bx bx-edit'></i>
+                    </button>
+                    <button class="reviewer-icon-btn danger" onclick="deleteSavedReviewer(${r.id})" title="Delete">
+                        <i class='bx bx-trash'></i>
+                    </button>
+                    <button class="reviewer-study-btn" onclick="studyFromSaved(${r.id})">
+                        Study <i class='bx bx-right-arrow-alt'></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
         }).join('')
     }
             </div>
@@ -4695,15 +4680,12 @@ function openMyReviewers() {
     document.body.appendChild(modal);
 }
 function editSavedReviewerDescription(id) {
-    const userId = localStorage.getItem('userId') || 'guest';
-    const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-    const reviewer = saved.find(r => r.id === id);
+    const reviewer = (window._savedReviewersCache || []).find(r => r.id === id);
     if (!reviewer) {
         showTemporaryModal('Reviewer not found.');
         return;
     }
 
-    // Show modal to edit description
     const modal = document.createElement('div');
     modal.className = 'modal-overlay active';
     modal.innerHTML = `
@@ -4718,7 +4700,6 @@ function editSavedReviewerDescription(id) {
                 <div class="form-group">
                     <label for="editSavedReviewerDescription">Description</label>
                     <textarea id="editSavedReviewerDescription" rows="4">${escapeHtml(reviewer.description || '')}</textarea>
-                    <small style="color:#999; font-size:12px;">Only the description will be updated. The reviewer content and source file remain unchanged.</small>
                 </div>
             </div>
             <div class="modal-footer">
@@ -4730,110 +4711,32 @@ function editSavedReviewerDescription(id) {
     document.body.appendChild(modal);
 }
 
-function updateSavedReviewerDescription(id) {
+async function updateSavedReviewerDescription(id) {
     const description = document.getElementById('editSavedReviewerDescription').value.trim();
-    const userId = localStorage.getItem('userId') || 'guest';
-    let saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-    const index = saved.findIndex(r => r.id === id);
-    if (index === -1) {
-        showTemporaryModal('Reviewer not found.');
-        return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/reviewer/${id}/description`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ description: description || 'No description provided' })
+        });
+        if (!response.ok) throw new Error('Failed to update');
+        showTemporaryModal('Reviewer description updated!');
+    } catch (error) {
+        console.error('Failed to update description:', error);
+        showTemporaryModal('Failed to update description.');
     }
 
-    // Update description
-    saved[index].description = description || 'No description provided';
-
-    localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
-    showTemporaryModal('Reviewer description updated!');
-
-    // Close the modal
-    const modal = document.querySelector('.modal-overlay.active');
-    if (modal) modal.remove();
-
-    // Refresh the "My Reviewers" modal
+    document.querySelector('.modal-overlay.active')?.remove();
     openMyReviewers();
 }
 function downloadSavedReviewerFile(id) {
-    const userId = localStorage.getItem('userId') || 'guest';
-    const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-    const reviewer = saved.find(r => r.id === id);
-
-    if (!reviewer || !reviewer.sourceFileName) {
+    const reviewer = (window._savedReviewersCache || []).find(r => r.id === id);
+    if (!reviewer || !reviewer.sourceFileUrl) {
         showTemporaryModal('No source file available for this reviewer.');
         return;
     }
-
-    // ✅ First check: Use the stored sourceFileUrl
-    if (reviewer.sourceFileUrl) {
-        requestDownloadPermission(reviewer.sourceFileUrl, reviewer.sourceFileName);
-        return;
-    }
-
-    // ✅ Second check: Try to find it in cached posts
-    const cachedPosts = JSON.parse(localStorage.getItem('cachedPosts') || '[]');
-    let fileUrl = null;
-
-    // Check if we have the file data
-    if (reviewer.sourceFileData) {
-        // If we have the file data stored
-        try {
-            // If it's stored as a data URL or object
-            if (reviewer.sourceFileData.data) {
-                const link = document.createElement('a');
-                link.href = reviewer.sourceFileData.data;
-                link.download = reviewer.sourceFileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                return;
-            }
-        } catch (error) {
-            console.error('Error downloading file:', error);
-        }
-    }
-
-    for (const post of cachedPosts) {
-        // Check document URLs
-        if (post.documentUrlList) {
-            for (const url of post.documentUrlList) {
-                const filename = getFileNameFromUrl(url);
-                if (filename === reviewer.sourceFileName) {
-                    fileUrl = url;
-                    break;
-                }
-            }
-        }
-
-        // Check image URLs
-        if (!fileUrl && post.imageUrlList) {
-            for (const url of post.imageUrlList) {
-                const filename = getFileNameFromUrl(url);
-                if (filename === reviewer.sourceFileName) {
-                    fileUrl = url;
-                    break;
-                }
-            }
-        }
-
-        // Check video URLs
-        if (!fileUrl && post.videoUrlList) {
-            for (const url of post.videoUrlList) {
-                const filename = getFileNameFromUrl(url);
-                if (filename === reviewer.sourceFileName) {
-                    fileUrl = url;
-                    break;
-                }
-            }
-        }
-
-        if (fileUrl) break;
-    }
-
-    if (fileUrl) {
-        requestDownloadPermission(fileUrl, reviewer.sourceFileName);
-    } else {
-        showTemporaryModal('Source file not found. It may have been removed.');
-    }
+    requestDownloadPermission(reviewer.sourceFileUrl, reviewer.sourceFileName);
 }
 
 function studyFromSaved(id) {
@@ -4854,14 +4757,16 @@ function studyFromSaved(id) {
     });
 }
 
-function deleteSavedReviewer(id) {
-    const userId = localStorage.getItem('userId') || 'guest';
-    let saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-    saved = saved.filter(r => r.id !== id);
-    localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
+async function deleteSavedReviewer(id) {
+    try {
+        await fetch(`${API_BASE_URL}/reviewer/${id}`, { method: 'DELETE' });
+    } catch (error) {
+        console.error('Failed to delete reviewer:', error);
+    }
     document.querySelector('.modal-overlay.active')?.remove();
     openMyReviewers();
 }
+
 
 document.getElementById('scrollToTopBtn')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 window.addEventListener('scroll', () => {
@@ -4931,6 +4836,19 @@ function downloadSourceFile(postId) {
     showTemporaryModal('Source file not found. It may have been removed.');
 }
 
+function truncateFilename(filename, maxLength = 20) {
+    if (!filename || filename.length <= maxLength) return filename;
+
+    const lastDot = filename.lastIndexOf('.');
+    const hasExt = lastDot > 0 && lastDot > filename.length - 8; // avoid weird cases
+    const ext = hasExt ? filename.slice(lastDot) : '';
+    const base = hasExt ? filename.slice(0, lastDot) : filename;
+
+    const keep = maxLength - ext.length - 3; // 3 for "..."
+    if (keep <= 0) return filename.slice(0, maxLength) + '…';
+
+    return base.slice(0, keep) + '…' + ext;
+}
 
 // ============================================
 // EXPORT FUNCTIONS FOR HTML
