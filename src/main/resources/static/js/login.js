@@ -12,7 +12,7 @@ if (window.location.hostname === 'localhost' ||
     console.log(' Running in PRODUCTION mode');
 } else {
     // Fallback
-    API_BASE_URL = 'https://shareview-vovf.onrender.com';
+    API_BASE_URL = 'https://shareview-1.onrender.com';
     console.log(' Using fallback URL');
 }
 
