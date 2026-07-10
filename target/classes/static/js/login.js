@@ -8,7 +8,7 @@ if (window.location.hostname === 'localhost' ||
     console.log(' Running in LOCAL mode');
 } else if (window.location.hostname.includes('railway.app')) {
     // Production on Render
-    API_BASE_URL = 'https://shareview-production.up.railway.app'; // ← CHANGE TO YOUR ACTUAL BACKEND URL
+    API_BASE_URL = 'shareview-backend-production.up.railway.app'; // ← CHANGE TO YOUR ACTUAL BACKEND URL
     console.log(' Running in PRODUCTION mode');
 } else {
     // Fallback

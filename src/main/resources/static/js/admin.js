@@ -6,7 +6,7 @@ if (window.location.hostname === 'localhost' ||
     API_BASE_URL = 'http://localhost:8080';
     console.log('🔧 Running in LOCAL mode');
 } else if (window.location.hostname.includes('railway.app')) {
-    API_BASE_URL = 'https://shareview-production.up.railway.app';
+    API_BASE_URL = 'shareview-backend-production.up.railway.app';
     console.log('🚀 Running in PRODUCTION mode');
 } else {
     API_BASE_URL = 'https://shareview-1.onrender.com';

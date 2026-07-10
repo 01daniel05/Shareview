@@ -4002,3 +4002,213 @@ body {
     background: #fee2e2;
     color: #dc2626;
 }
+
+/* ============================================
+   FILE PREVIEW MODAL
+   ============================================ */
+
+.file-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(8px);
+}
+
+.file-preview-modal.active {
+    opacity: 1;
+}
+
+.file-preview-content {
+    background: white;
+    border-radius: 16px;
+    max-width: 90vw;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    position: relative;
+    animation: modalZoomIn 0.3s ease;
+}
+
+@keyframes modalZoomIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.file-preview-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.file-preview-close:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
+
+.file-preview-body {
+    padding: 20px;
+    max-height: 80vh;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 300px;
+    min-height: 200px;
+}
+
+.file-preview-body img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.file-preview-body video {
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 8px;
+    background: #000;
+}
+
+.file-preview-body .document-preview-content {
+    padding: 40px;
+    text-align: center;
+    max-width: 600px;
+    width: 100%;
+}
+
+.file-preview-body .document-preview-content i {
+    font-size: 64px;
+    color: #667eea;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.file-preview-body .document-preview-content h3 {
+    color: #1e293b;
+    margin-bottom: 8px;
+}
+
+.file-preview-body .document-preview-content p {
+    color: #64748b;
+    margin-bottom: 20px;
+}
+
+.file-preview-body .document-preview-content .document-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.file-preview-body .document-preview-content .document-actions button {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-preview-body .document-preview-content .document-actions .download-btn {
+    background: #4f46e5;
+    color: white;
+}
+
+.file-preview-body .document-preview-content .document-actions .download-btn:hover {
+    background: #4338ca;
+    transform: translateY(-2px);
+}
+
+.file-preview-body .document-preview-content .document-actions .close-btn {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.file-preview-body .document-preview-content .document-actions .close-btn:hover {
+    background: #e2e8f0;
+}
+
+.file-preview-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+}
+
+.file-preview-footer .file-name {
+    font-weight: 500;
+    color: #1e293b;
+    font-size: 14px;
+}
+
+.file-preview-footer .file-size {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .file-preview-content {
+        max-width: 95vw;
+        max-height: 95vh;
+    }
+
+    .file-preview-body {
+        padding: 12px;
+        min-width: auto;
+        min-height: 150px;
+    }
+
+    .file-preview-body img,
+    .file-preview-body video {
+        max-height: 60vh;
+    }
+
+    .file-preview-body .document-preview-content {
+        padding: 20px;
+    }
+
+    .file-preview-close {
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+        top: 8px;
+        right: 8px;
+    }
+}

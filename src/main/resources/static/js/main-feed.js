@@ -9,7 +9,7 @@ if (window.location.hostname === 'localhost' ||
     API_BASE_URL = 'http://localhost:8080';
     console.log(' Running in LOCAL mode');
 } else if (window.location.hostname.includes('railway.app')) {
-    API_BASE_URL = 'https://shareview-production.up.railway.app';
+    API_BASE_URL = 'shareview-backend-production.up.railway.app';
     console.log(' Running in PRODUCTION mode');
 } else {
     API_BASE_URL = 'https://shareview-1.onrender.com';
@@ -1319,10 +1319,11 @@ function renderFileItem(file, post) {
     const filename = getFileNameFromUrl(file.url);
     const postTitle = escapeJsString(post.title);
     const author = escapeJsString(`${post.user.firstName} ${post.user.lastName}`);
+
     switch (file.type) {
         case 'image':
             return `
-                <div class="media-container" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'image', '${fullUrl}'); maximizeImage('${fullUrl}', '${filename}')">
+                <div class="media-container" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'image', '${fullUrl}'); window.open('${fullUrl}', '_blank')">
                     <img src="${fullUrl}" alt="${filename}" class="post-file-image" loading="lazy">
                 </div>
             `;
@@ -1334,7 +1335,7 @@ function renderFileItem(file, post) {
                         <source src="${fullUrl}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                    <div class="video-controls-overlay" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); maximizeVideo('${fullUrl}', '${filename}')">
+                    <div class="video-controls-overlay" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); window.open('${fullUrl}', '_blank')">
                         <button class="video-play-btn">
                             <i class='bx bx-play'></i>
                         </button>
@@ -1343,7 +1344,7 @@ function renderFileItem(file, post) {
             `;
         case 'document':
             return `
-                <div class="post-file-document" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'document', ''); openDocumentPreview('${fullUrl}', '${filename}')">
+                <div class="post-file-document" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'document', ''); window.open('${fullUrl}', '_blank')">
                     <i class='bx bx-file'></i>
                     <div class="document-info">
                         <div class="document-name">${filename}</div>
@@ -1358,7 +1359,6 @@ function renderFileItem(file, post) {
             return '';
     }
 }
-
 function maximizeImage(imageUrl, filename) {
     const modal = document.createElement('div');
     modal.className = 'image-maximize-modal active';
@@ -2393,17 +2393,30 @@ function escapeHtml(unsafe) {
 }
 
 function formatTime(timestamp) {
+    if (!timestamp) return 'Just now';
+
     const date = new Date(timestamp);
     const now = new Date();
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+        return 'Invalid date';
+    }
+
     const diff = now - date;
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
+
     if (minutes < 1) return 'Just now';
     if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
     if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
     if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
 }
 
 function formatFileSize(bytes) {
@@ -2882,7 +2895,6 @@ function renderQuizQuestionList() {
         </div>
     `).join('');
 }
-
 function addQuizQuestion() {
     const question = document.getElementById('quiz-question').value.trim();
     const optionA = document.getElementById('quiz-option-a').value.trim();
@@ -4054,6 +4066,195 @@ function downloadSourceFile(postId) {
 }
 
 // ============================================
+// FILE PREVIEW (For regular post files)
+// ============================================
+
+function previewFile(fileUrl, fileType, filename) {
+    console.log('previewFile called with:', fileUrl, fileType, filename);
+
+    if (!fileUrl) {
+        console.error('No file URL provided');
+        showTemporaryModal('Cannot preview: No file URL');
+        return;
+    }
+
+    // Close any existing preview
+    closeFilePreview();
+
+    const modal = document.createElement('div');
+    modal.className = 'file-preview-modal active';
+    modal.id = 'filePreviewModal';
+
+    let bodyContent = '';
+    let displayName = filename || 'File';
+
+    // Try to extract filename from URL if not provided
+    if (!filename || filename === 'File') {
+        try {
+            const urlParts = fileUrl.split('/');
+            displayName = urlParts[urlParts.length - 1] || 'File';
+            displayName = displayName.split('?')[0];
+            displayName = decodeURIComponent(displayName);
+        } catch (e) {
+            displayName = 'File';
+        }
+    }
+
+    // Determine file type
+    const type = getFileType(fileUrl, fileType);
+    console.log('Detected file type:', type);
+
+    switch (type) {
+        case 'image':
+            bodyContent = `
+                <img src="${fileUrl}" alt="${displayName}" loading="lazy" 
+                     onerror="this.parentElement.innerHTML='<div class=\\'document-preview-content\\'><i class=\\'bx bx-image\\'></i><h3>Failed to load image</h3><p>The image could not be loaded.</p><div class=\\'document-actions\\'><button class=\\'close-btn\\' onclick=\\'closeFilePreview()\\'>Close</button></div></div>'">
+            `;
+            break;
+
+        case 'video':
+            bodyContent = `
+                <video controls autoplay>
+                    <source src="${fileUrl}" type="video/mp4">
+                    <source src="${fileUrl}" type="video/webm">
+                    <source src="${fileUrl}" type="video/ogg">
+                    Your browser does not support the video tag.
+                </video>
+            `;
+            break;
+
+        case 'document':
+            bodyContent = `
+                <div class="document-preview-content">
+                    <i class='bx bx-file'></i>
+                    <h3>${escapeHtml(displayName)}</h3>
+                    <p>This is a document file. Click download to view it.</p>
+                    <div class="document-actions">
+                        <button class="download-btn" onclick="event.stopPropagation(); closeFilePreview(); requestDownloadPermission('${fileUrl}', '${escapeHtml(displayName)}')">
+                            <i class='bx bx-download'></i> Download
+                        </button>
+                        <button class="close-btn" onclick="closeFilePreview()">Close</button>
+                    </div>
+                </div>
+            `;
+            break;
+
+        default:
+            bodyContent = `
+                <div class="document-preview-content">
+                    <i class='bx bx-file'></i>
+                    <h3>${escapeHtml(displayName)}</h3>
+                    <p>File preview not available for this type.</p>
+                    <div class="document-actions">
+                        <button class="download-btn" onclick="event.stopPropagation(); closeFilePreview(); requestDownloadPermission('${fileUrl}', '${escapeHtml(displayName)}')">
+                            <i class='bx bx-download'></i> Download
+                        </button>
+                        <button class="close-btn" onclick="closeFilePreview()">Close</button>
+                    </div>
+                </div>
+            `;
+    }
+
+    modal.innerHTML = `
+        <div class="file-preview-content">
+            <button class="file-preview-close" onclick="closeFilePreview()">
+                <i class='bx bx-x'></i>
+            </button>
+            <div class="file-preview-body">
+                ${bodyContent}
+            </div>
+            <div class="file-preview-footer">
+                <span class="file-name">${escapeHtml(displayName)}</span>
+                <span class="file-size">${type.charAt(0).toUpperCase() + type.slice(1)}</span>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close on click outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeFilePreview();
+        }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', handleFilePreviewKeydown);
+}
+
+function closeFilePreview() {
+    const modal = document.getElementById('filePreviewModal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(function() {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
+    }
+    document.removeEventListener('keydown', handleFilePreviewKeydown);
+}
+
+function handleFilePreviewKeydown(e) {
+    if (e.key === 'Escape') {
+        closeFilePreview();
+    }
+}
+
+function getFileType(url, fileType) {
+    // If we have a file type from the server, use it
+    if (fileType) {
+        if (fileType.startsWith('image/')) return 'image';
+        if (fileType.startsWith('video/')) return 'video';
+        if (fileType.startsWith('application/') ||
+            fileType.includes('document') ||
+            fileType.includes('pdf') ||
+            fileType.includes('word') ||
+            fileType.includes('excel')) return 'document';
+    }
+
+    // Otherwise detect from URL
+    if (url) {
+        const urlLower = url.toLowerCase();
+        if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/)) return 'image';
+        if (urlLower.match(/\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/)) return 'video';
+        if (urlLower.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|rar|7z|gz)$/)) return 'document';
+
+        // Check Cloudinary URL patterns
+        if (urlLower.includes('image')) return 'image';
+        if (urlLower.includes('video')) return 'video';
+        if (urlLower.includes('raw') || urlLower.includes('document') || urlLower.includes('file')) return 'document';
+    }
+
+    return 'document';
+}
+function getFileType(url, fileType) {
+    // If we have a file type from the server, use it
+    if (fileType) {
+        if (fileType.startsWith('image/')) return 'image';
+        if (fileType.startsWith('video/')) return 'video';
+        if (fileType.startsWith('application/') ||
+            fileType.includes('document') ||
+            fileType.includes('pdf') ||
+            fileType.includes('word') ||
+            fileType.includes('excel')) return 'document';
+    }
+
+    // Otherwise detect from URL
+    const urlLower = url.toLowerCase();
+    if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/)) return 'image';
+    if (urlLower.match(/\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/)) return 'video';
+    if (urlLower.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|rar|7z|gz)$/)) return 'document';
+
+    // Check Cloudinary URL patterns
+    if (urlLower.includes('image')) return 'image';
+    if (urlLower.includes('video')) return 'video';
+    if (urlLower.includes('raw') || urlLower.includes('document') || urlLower.includes('file')) return 'document';
+
+    return 'document';
+}
+// ============================================
 // UTILITY – TRUNCATE FILENAME
 // ============================================
 
@@ -4067,6 +4268,7 @@ function truncateFilename(filename, maxLength = 20) {
     if (keep <= 0) return filename.slice(0, maxLength) + '…';
     return base.slice(0, keep) + '…' + ext;
 }
+
 
 // ============================================
 // EXPORT FUNCTIONS FOR HTML
@@ -4121,3 +4323,5 @@ window.renderQuizCreator = renderQuizCreator;
 window.recordRecentVisit = recordRecentVisit;
 window.removeRecentVisit = removeRecentVisit;
 window.goToPost = goToPost;
+window.previewFile = previewFile;
+window.closeFilePreview = closeFilePreview;
