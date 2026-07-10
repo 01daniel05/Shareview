@@ -9,7 +9,7 @@ if (window.location.hostname === 'localhost' ||
     API_BASE_URL = 'https://shareview-production.up.railway.app';
     console.log('🚀 Running in PRODUCTION mode');
 } else {
-    API_BASE_URL = 'https://shareview-vovf.onrender.com';
+    API_BASE_URL = 'https://shareview-1.onrender.com';
     console.log('🌐 Using fallback URL');
 }
 
