@@ -1,8 +1,11 @@
 package Shareview.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+
 import java.time.LocalDateTime;
 
+@Getter
 @Entity
 @Table(name = "otp_codes")
 public class OTP {
@@ -32,32 +35,16 @@ public class OTP {
 
     // ---------------- Getters and Setters ----------------
 
-    public Long getId() {
-        return id;
-    }
-
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public String getEmail() {
-        return email;
     }
 
     public void setEmail(String email) {
         this.email = email;
     }
 
-    public String getOtpCode() {
-        return otpCode;
-    }
-
     public void setOtpCode(String otpCode) {
         this.otpCode = otpCode;
-    }
-
-    public LocalDateTime getExpiresAt() {
-        return expiresAt;
     }
 
     public void setExpiresAt(LocalDateTime expiresAt) {

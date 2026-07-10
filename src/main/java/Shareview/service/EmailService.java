@@ -21,7 +21,7 @@ public class EmailService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final OTPRepository otpRepository;
-    private final GmailEmailService gmailEmailService;
+    private final SendGridEmailService sendGridEmailService;
 
     @Value("${app.email.from}")
     private String fromEmail;
@@ -31,9 +31,9 @@ public class EmailService {
 
     @Autowired
     public EmailService(OTPRepository otpRepository,
-                        GmailEmailService gmailEmailService) {
+                        SendGridEmailService sendGridEmailService) {
         this.otpRepository = otpRepository;
-        this.gmailEmailService = gmailEmailService;
+        this.sendGridEmailService = sendGridEmailService;
         logConfiguration();
     }
 
@@ -44,7 +44,6 @@ public class EmailService {
         logger.info("=== EMAIL SERVICE CONFIGURATION ===");
         logger.info("From Email: {}", fromEmail);
         logger.info("Sender Name: {}", senderName);
-        logger.info("Using SendGrid Web API");
         logger.info("================================");
     }
 
@@ -74,7 +73,7 @@ public class EmailService {
 
             // Send email via SendGrid Web API
             logger.info("Attempting to send via Mailjet...");
-            gmailEmailService.sendOTP(email, otp);
+            sendGridEmailService.sendOTP(email, otp);
 
             logger.info("OTP sent successfully to: {}", email);
 
@@ -150,6 +149,6 @@ public class EmailService {
      * Test email sending
      */
     public boolean sendTestEmail(String toEmail) {
-        return gmailEmailService.sendTestEmail(toEmail);
+        return sendGridEmailService.sendTestEmail(toEmail);
     }
 }

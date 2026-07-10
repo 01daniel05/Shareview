@@ -2,13 +2,17 @@ package Shareview.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import lombok.Getter;
+
 import java.time.LocalDateTime;
 
+@Getter
 @Entity
 @Table(name = "activity_logs")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ActivityLog {
 
+    // ---------------- Getters and Setters ----------------
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -44,47 +48,24 @@ public class ActivityLog {
 
     }
 
-    // ---------------- Getters and Setters ----------------
-    public Long getId() {
-        return id;
-    }
-
     public void setId(Long id) {
         this.id = id;
     }
 
-    public User getUser() {
-        return user;
-    }
     public void setUser(User user) {
         this.user = user;
-    }
-    public String getAction() {
-        return action;
     }
 
     public void setAction(String action) {
         this.action = action;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
     public void setDescription(String description) {
         this.description = description;
     }
 
-    public String getIpAddress() {
-        return ipAddress;
-    }
-
     public void setIpAddress(String ipAddress) {
         this.ipAddress = ipAddress;
-    }
-
-    public LocalDateTime getTimestamp() {
-        return timestamp;
     }
 
     public void setTimestamp(LocalDateTime timestamp) {
