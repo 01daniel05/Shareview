@@ -1,259 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title>Shareview Admin Dashboard</title>
-    <link rel="icon" type="images/ShareviewLogo" href="/images/ShareviewLogo.png"
-          style="border-radius: 50%; width:100px; height:100px ; object-fit:cover ">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="icon" type="images/ShareviewLogo" href="/images/ShareviewLogo.png" style="border-radius:50%;width:100px;height:100px;object-fit:cover" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
 </head>
+
 <body>
-<nav class="navbar">
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" role="navigation" aria-label="Main navigation">
     <div class="nav-left">
-        <div class="menu-toggle" onclick="toggleSidebar()">
+        <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Toggle sidebar" type="button">
             <i class="fas fa-bars"></i>
-        </div>
-        <div class="logo">📚 Shareview Admin</div>
+        </button>
+        <div class="logo">Shareview Admin</div>
     </div>
 
-    <div class="nav-center">
+    <div class="nav-center" id="navSearchContainer">
         <div class="search-box">
-            <input type="text" placeholder="Search users, posts, reports...">
+            <input type="text" id="globalSearchInput" placeholder="Search users, reports..." aria-label="Search" />
             <i class="fas fa-search"></i>
         </div>
     </div>
 
     <div class="nav-right">
-        <div class="nav-icon" onclick="toggleNotifications()">
+        <button class="mobile-search-toggle nav-icon" onclick="toggleMobileSearch()" aria-label="Toggle search" type="button">
+            <i class="fas fa-search"></i>
+        </button>
+
+        <button class="nav-icon" onclick="toggleNotifications()" aria-label="Notifications" type="button">
             <i class="fas fa-bell"></i>
             <span class="badge" id="notification-count">0</span>
-        </div>
+        </button>
 
         <div class="profile-container">
-            <div class="profile-pic" onclick="toggleProfileDropdown()">AD</div>
-            <div class="profile-dropdown" id="profileDropdown">
-                <div class="dropdown-item">
-                    <i class="fas fa-user"></i>
-                    <span>My Profile</span>
-                </div>
-                <div class="dropdown-item">
-                    <i class="fas fa-cog"></i>
-                    <span>Settings</span>
-                </div>
+            <div class="profile-pic" onclick="toggleProfileDropdown()" role="button" tabindex="0" aria-label="Profile menu">
+                AD
+            </div>
+            <div class="profile-dropdown" id="profileDropdown" role="menu">
+                <button class="dropdown-item" role="menuitem" type="button">
+                    <i class="fas fa-user"></i> My Profile
+                </button>
+                <button class="dropdown-item" role="menuitem" type="button">
+                    <i class="fas fa-cog"></i> Settings
+                </button>
                 <div class="dropdown-divider"></div>
-                <div class="dropdown-item" onclick="logout()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </div>
+                <button class="dropdown-item" onclick="logout()" role="menuitem" type="button">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
             </div>
         </div>
     </div>
 </nav>
 
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<!-- ===== SIDEBAR OVERLAY ===== -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()" aria-hidden="true"></div>
 
+<!-- ===== MAIN CONTAINER ===== -->
 <div class="container">
-    <aside class="left-sidebar" id="leftSidebar">
-        <div class="menu-item active" onclick="switchTab('dashboard', this)">
-            <i class="fas fa-chart-line"></i>
-            <span>Dashboard</span>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="left-sidebar" id="leftSidebar" role="navigation" aria-label="Sidebar navigation">
+        <div class="sidebar-header">
+            <div class="sidebar-title">Navigation</div>
+            <div class="sidebar-subtitle">Admin Panel</div>
         </div>
-        <div class="menu-item" onclick="switchTab('users', this)">
-            <i class="fas fa-users"></i>
-            <span>Users</span>
+
+        <div style="flex:1; padding: 4px 0;">
+            <button class="menu-item active" onclick="switchTab('dashboard', this)" type="button">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </button>
+            <button class="menu-item" onclick="switchTab('users', this)" type="button">
+                <i class="fas fa-users"></i>
+                <span>Users</span>
+            </button>
+            <button class="menu-item" onclick="switchTab('reports', this)" type="button">
+                <span>Reports</span>
+            </button>
+            <button class="menu-item" onclick="switchTab('settings', this)" type="button">
+                <span>Settings</span>
+            </button>
         </div>
-        <div class="menu-item" onclick="switchTab('posts', this)">
-            <i class="fas fa-file-alt"></i>
-            <span>Posts</span>
-        </div>
-        <div class="menu-item" onclick="switchTab('comments', this)">
-            <i class="fas fa-comments"></i>
-            <span>Comments</span>
-        </div>
-        <div class="menu-item" onclick="switchTab('reports', this)">
-            <i class="fas fa-flag"></i>
-            <span>Reports</span>
-        </div>
-        <div class="menu-item" onclick="switchTab('settings', this)">
-            <i class="fas fa-cog"></i>
-            <span>Settings</span>
+
+        <div class="sidebar-footer">
+            <div class="user-info-sidebar">
+                <div class="footer-avatar">AD</div>
+                <div class="footer-user-details">
+                    <div class="footer-user-name">Admin User</div>
+                    <div class="footer-user-role">Administrator</div>
+                </div>
+            </div>
         </div>
     </aside>
 
-    <main class="feed">
-        <!-- Dashboard Tab -->
+    <!-- ===== FEED / MAIN CONTENT ===== -->
+    <main class="feed" id="mainFeed">
+
+        <!-- ===== DASHBOARD TAB ===== -->
         <div id="dashboard-tab" class="tab-content active">
             <div class="page-header">
-                <h1 class="page-title">Dashboard Overview</h1>
+                <h1 class="page-title"><i class="fas fa-chart-pie"></i> Dashboard Overview</h1>
                 <p class="page-subtitle">Welcome back, Admin! Here's what's happening today.</p>
             </div>
 
             <div class="stats-grid">
-                <div class="stat-card" onclick="switchTab('users')">
+                <div class="stat-card" onclick="switchTab('users')" role="button" tabindex="0">
                     <div class="stat-value" id="total-users">0</div>
                     <div class="stat-label">Total Users</div>
+                    <div class="stat-icon-small"><i class="fas fa-users"></i></div>
                 </div>
-                <div class="stat-card" onclick="switchTab('posts')">
-                    <div class="stat-value" id="total-posts">0</div>
-                    <div class="stat-label">Total Posts</div>
-                </div>
-                <div class="stat-card" onclick="switchTab('comments')">
-                    <div class="stat-value" id="total-comments">0</div>
-                    <div class="stat-label">Total Comments</div>
-                </div>
-                <div class="stat-card" onclick="switchTab('reports')">
+                <div class="stat-card" onclick="switchTab('reports')" role="button" tabindex="0">
                     <div class="stat-value" id="pending-reports">0</div>
                     <div class="stat-label">Active Reports</div>
+                    <div class="stat-icon-small"><i class="fas fa-flag"></i></div>
                 </div>
             </div>
 
             <div class="content-section">
                 <div class="section-header">
-                    <h2 class="section-title">Recent Activity</h2>
-                    <button onclick="loadActivityLogs()" class="btn-secondary">
+                    <h2 class="section-title"><i class="fas fa-history"></i> Recent Activity</h2>
+                    <button onclick="loadActivityLogs()" class="btn-secondary" type="button">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
                 </div>
-
                 <div id="activity-logs-container">
                     <div class="activity-empty-state">
-                        <i class="fas fa-history" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
-                        <h3 style="color: #999; margin-bottom: 8px;">Loading Activity Logs...</h3>
-                        <p style="color: #aaa; font-size: 14px;">Please wait while we fetch the latest activity.</p>
+                        <i class="fas fa-history"></i>
+                        <h3>Loading Activity Logs...</h3>
+                        <p>Please wait while we fetch the latest activity.</p>
                     </div>
                 </div>
-                <div id="logs-pagination" style="margin-top: 20px;"></div>
+                <div id="logs-pagination" style="margin-top:16px;"></div>
             </div>
         </div>
 
-        <!-- Users Tab -->
+        <!-- ===== USERS TAB ===== -->
         <div id="users-tab" class="tab-content">
             <div class="page-header">
-                <h1 class="page-title">User Management</h1>
+                <h1 class="page-title"><i class="fas fa-users-cog"></i> User Management</h1>
                 <p class="page-subtitle">Manage and monitor all registered users</p>
-                <button class="btn-secondary" onclick="exportUsers()" style="margin-top: 10px;">
+                <button class="btn-secondary" onclick="exportUsers()" style="margin-top:8px;" type="button">
                     <i class="fas fa-download"></i> Export Users
                 </button>
             </div>
 
             <div class="content-section">
                 <div class="section-header">
-                    <h2 class="section-title">All Users</h2>
-                    <div class="section-actions">
-                        <button class="filter-btn active" onclick="filterUsers('all', this)">All</button>
-                        <button class="filter-btn" onclick="filterUsers('active', this)">Active</button>
-                        <button class="filter-btn" onclick="filterUsers('suspended', this)">Suspended</button>
-                        <button class="filter-btn" onclick="filterUsers('admin', this)">Admins</button>
+                    <h2 class="section-title"><i class="fas fa-list"></i> All Users</h2>
+                    <div class="section-actions" id="userFilterContainer">
+                        <button class="filter-btn active" onclick="filterUsers('all', this)" type="button">All</button>
+                        <button class="filter-btn" onclick="filterUsers('ACTIVE', this)" type="button">Active</button>
+                        <button class="filter-btn" onclick="filterUsers('SUSPENDED', this)" type="button">Suspended</button>
+                        <button class="filter-btn" onclick="filterUsers('ADMIN', this)" type="button">Admins</button>
                     </div>
                 </div>
 
-                <div id="users-loading" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #667eea;"></i>
-                    <p style="margin-top: 10px; color: #666;">Loading users...</p>
+                <div id="users-loading" class="table-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading users...</p>
                 </div>
 
-                <!-- Replace this entire users table section -->
-                <table class="data-table" id="users-table" style="display: none;">
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>User</th>
-                        <th>Email</th>
-                        <th>Join Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody id="users-table-body">
-                    </tbody>
-                </table>
+                <div class="table-wrapper" id="usersTableWrapper" style="display:none;">
+                    <table class="data-table" id="users-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Join Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="users-table-body"></tbody>
+                    </table>
+                </div>
+                <div id="users-pagination" style="margin-top:16px;"></div>
             </div>
         </div>
 
-        <!-- Posts Tab -->
-        <div id="posts-tab" class="tab-content">
-            <div class="page-header">
-                <h1 class="page-title">Post Management</h1>
-                <p class="page-subtitle">Monitor and moderate all posts</p>
-            </div>
-
-            <div class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">All Posts</h2>
-                    <div class="section-actions">
-                        <button class="filter-btn active" onclick="filterPosts('all', this)">All</button>
-                        <button class="filter-btn" onclick="filterPosts('published', this)">Published</button>
-                        <button class="filter-btn" onclick="filterPosts('pending', this)">Pending</button>
-                        <button class="filter-btn" onclick="filterPosts('reported', this)">Reported</button>
-                    </div>
-                </div>
-
-                <div id="posts-loading" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #667eea;"></i>
-                    <p style="margin-top: 10px; color: #666;">Loading posts...</p>
-                </div>
-
-                <table class="data-table" id="posts-table" style="display: none;">
-                    <thead>
-                    <tr>
-                        <th>Post</th>
-                        <th>Author</th>
-                        <th>Category</th>
-                        <th>Date</th>
-                        <th>Views</th>
-                        <th>Comments</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody id="posts-table-body">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Comments Tab -->
-        <div id="comments-tab" class="tab-content">
-            <div class="page-header">
-                <h1 class="page-title">Comment Management</h1>
-                <p class="page-subtitle">Review and moderate user comments</p>
-            </div>
-
-            <div class="content-section">
-                <div class="section-header">
-                    <h2 class="section-title">Recent Comments</h2>
-                    <div class="section-actions">
-                        <button class="filter-btn active" onclick="filterComments('all', this)">All</button>
-                        <button class="filter-btn" onclick="filterComments('reported', this)">Reported</button>
-                        <button class="filter-btn" onclick="filterComments('hidden', this)">Hidden</button>
-                    </div>
-                </div>
-
-                <div id="comments-loading" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #667eea;"></i>
-                    <p style="margin-top: 10px; color: #666;">Loading comments...</p>
-                </div>
-
-                <table class="data-table" id="comments-table" style="display: none;">
-                    <thead>
-                    <tr>
-                        <th>Comment</th>
-                        <th>Author</th>
-                        <th>Post</th>
-                        <th>Date</th>
-                        <th>Reports</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody id="comments-table-body">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Reports Tab -->
+        <!-- ===== REPORTS TAB ===== -->
         <div id="reports-tab" class="tab-content">
             <div class="page-header">
                 <h1 class="page-title">Reported Content</h1>
@@ -262,78 +193,70 @@
 
             <div class="content-section">
                 <div class="section-header">
-                    <h2 class="section-title">Active Reports</h2>
-                    <div class="section-actions">
-                        <button class="filter-btn active" onclick="filterReports('pending', this)">Pending</button>
-                        <button class="filter-btn" onclick="filterReports('resolved', this)">Resolved</button>
-                        <button class="filter-btn" onclick="filterReports('dismissed', this)">Dismissed</button>
+                    <h2 class="section-title"><i class="fas fa-exclamation-triangle"></i> Active Reports</h2>
+                    <div class="section-actions" id="reportFilterContainer">
+                        <button class="filter-btn active" onclick="filterReports('PENDING', this)" type="button">Pending</button>
+                        <button class="filter-btn" onclick="filterReports('RESOLVED', this)" type="button">Resolved</button>
+                        <button class="filter-btn" onclick="filterReports('DISMISSED', this)" type="button">Dismissed</button>
                     </div>
                 </div>
 
-                <div id="reports-loading" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #667eea;"></i>
-                    <p style="margin-top: 10px; color: #666;">Loading reports...</p>
+                <div id="reports-loading" class="table-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading reports...</p>
                 </div>
 
-                <table class="data-table" id="reports-table" style="display: none;">
-                    <thead>
-                    <tr>
-                        <th>Content</th>
-                        <th>Reported By</th>
-                        <th>Reason</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody id="reports-table-body">
-                    </tbody>
-                </table>
+                <div class="table-wrapper" id="reportsTableWrapper" style="display:none;">
+                    <table class="data-table" id="reports-table">
+                        <thead>
+                        <tr>
+                            <th>Content</th>
+                            <th>Reported By</th>
+                            <th>Reason</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="reports-table-body"></tbody>
+                    </table>
+                </div>
+                <div id="reports-pagination" style="margin-top:16px;"></div>
             </div>
         </div>
 
-        <!-- Settings Tab -->
+        <!-- ===== SETTINGS TAB ===== -->
         <div id="settings-tab" class="tab-content">
             <div class="page-header">
-                <h1 class="page-title">System Settings</h1>
+                <h1 class="page-title"><i class="fas fa-sliders-h"></i> System Settings</h1>
                 <p class="page-subtitle">Configure platform settings</p>
             </div>
 
             <div class="content-section">
                 <div class="section-header">
-                    <h2 class="section-title">General Settings</h2>
+                    <h2 class="section-title"><i class="fas fa-cog"></i> General Settings</h2>
                 </div>
-
-                <div style="display: grid; gap: 25px;" id="settings-form">
-                    <!-- Settings will be loaded dynamically -->
-                    <div id="settings-loading" style="text-align: center; padding: 40px;">
-                        <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #667eea;"></i>
-                        <p style="margin-top: 10px; color: #666;">Loading settings...</p>
+                <div id="settings-form" style="display:grid; gap:20px;">
+                    <div id="settings-loading" class="table-loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading settings...</p>
                     </div>
                 </div>
             </div>
         </div>
+
     </main>
 </div>
 
-<!-- Modal for user details -->
-<div id="user-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modal-title">User Details</h2>
-            <span class="close-modal" onclick="closeModal()">&times;</span>
-        </div>
-        <div class="modal-body" id="modal-body">
-            Loading...
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeModal()" class="btn-secondary">Close</button>
-        </div>
-    </div>
-</div>
+<!-- ===== MODAL CONTAINER ===== -->
+<div id="modalContainer"></div>
+
+<!-- ===== SCRIPTS ===== -->
+
 
 <script src="/js/admin.js"></script>
 <script src="/js/modal.js"></script>
+<script src="/css/admin.css"></script>
 
 </body>
 </html>

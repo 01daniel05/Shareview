@@ -23,10 +23,10 @@ public class EmailService {
     private final OTPRepository otpRepository;
     private final SendGridEmailService sendGridEmailService;
 
-    @Value("${app.email.from}")
+    @Value("${app.email.from:shareview682@gmail.com}")
     private String fromEmail;
 
-    @Value("${app.email.sender-name}")
+    @Value("${app.email.sender-name:Shareview}")
     private String senderName;
 
     @Autowired

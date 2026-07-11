@@ -60,18 +60,22 @@ public class ReviewerController {
         try {
             Object items = aiReviewerService.generateReviewer(request);
 
-            return ResponseEntity.ok(Map.of(
-                    "status", "success",
-                    "items", items,
-                    "sourceFileUrl", request.getSourceFileUrl(),
-                    "sourceFileName", request.getSourceFileName(),
-                    "sourceFileType", request.getSourceFileType(),
-                    "message", "Reviewer generated successfully"
-            ));
+            // Map.of() throws NullPointerException if ANY value is null.
+            // sourceFileUrl/Name/Type are legitimately null when the user pastes
+            // text instead of uploading a file, so we use a null-tolerant map here.
+            Map<String, Object> responseBody = new java.util.LinkedHashMap<>();
+            responseBody.put("status", "success");
+            responseBody.put("items", items);
+            responseBody.put("sourceFileUrl", request.getSourceFileUrl());
+            responseBody.put("sourceFileName", request.getSourceFileName());
+            responseBody.put("sourceFileType", request.getSourceFileType());
+            responseBody.put("message", "Reviewer generated successfully");
+
+            return ResponseEntity.ok(responseBody);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "status", "error",
-                    "message", e.getMessage()
+                    "message", e.getMessage() != null ? e.getMessage() : "Unknown error occurred while generating reviewer."
             ));
         }
     }

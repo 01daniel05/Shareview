@@ -58,18 +58,41 @@ public class AIReviewerService {
         }
 
         JsonNode root = objectMapper.readTree(response.body());
-        String text = root
-                .path("candidates")
-                .get(0)
-                .path("content")
-                .path("parts")
-                .get(0)
-                .path("text")
-                .asText();
+
+        JsonNode candidates = root.path("candidates");
+        if (!candidates.isArray() || candidates.isEmpty()) {
+            String blockReason = root.path("promptFeedback").path("blockReason").asText("unknown");
+            throw new RuntimeException(
+                    "AI returned no candidates (possibly blocked). blockReason=" + blockReason
+                            + " raw=" + response.body());
+        }
+
+        JsonNode firstCandidate = candidates.get(0);
+        String finishReason = firstCandidate.path("finishReason").asText("");
+
+        JsonNode partsNode = firstCandidate.path("content").path("parts");
+        if (!partsNode.isArray() || partsNode.isEmpty()) {
+            throw new RuntimeException(
+                    "AI response had no content parts. finishReason=" + finishReason
+                            + " raw=" + response.body());
+        }
+
+        String text = partsNode.get(0).path("text").asText();
+
+        if (text == null || text.isBlank()) {
+            throw new RuntimeException(
+                    "AI returned empty text. finishReason=" + finishReason + " raw=" + response.body());
+        }
 
         text = cleanJsonText(text);
 
-        return objectMapper.readValue(text, Object.class);
+        try {
+            return objectMapper.readValue(text, Object.class);
+        } catch (Exception jsonEx) {
+            throw new RuntimeException(
+                    "AI response was not valid JSON: " + jsonEx.getMessage()
+                            + " | raw text: " + text);
+        }
     }
 
     private String buildPrompt(ReviewerGenerateRequest request) {

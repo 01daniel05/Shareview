@@ -42,6 +42,25 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @PostMapping("/check-email")
+    public ResponseEntity<Map<String, String>> checkIfEmailExisted(@Valid @RequestBody User user) {
+        try {
+            // Check if user already exists
+            if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(Map.of("status", "error", "message", "This Email is already registered!"));
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("status", "success", "message", "The Email has no matched!"));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("status", "error", "message", "Registration failed. Please try again later."));
+        }
+    }
+
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> registerUser(@Valid @RequestBody User user) {
         try {

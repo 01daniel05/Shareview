@@ -8,7 +8,7 @@ if (window.location.hostname === 'localhost' ||
     console.log(' Running in LOCAL mode');
 } else if (window.location.hostname.includes('railway.app')) {
     // Production on Render
-    API_BASE_URL = 'shareview-backend-production.up.railway.app'; // ← CHANGE TO YOUR ACTUAL BACKEND URL
+    API_BASE_URL = 'https://shareview-backend-production.up.railway.app'; // ← CHANGE TO YOUR ACTUAL BACKEND URL
     console.log(' Running in PRODUCTION mode');
 } else {
     // Fallback
@@ -198,8 +198,26 @@ async function register() {
 
         console.log("Data being sent:", JSON.stringify(authState.tempUserData));
 
-        // Proceed to OTP verification
-        await sendOtp();
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/check-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(authState.tempUserData)
+            });
+
+            const data = await response.json();
+
+
+            if (response.ok && data.status === 'success') {
+                // Proceed to OTP verification
+                await sendOtp();
+            } else {
+                showTemporaryModal(data.message || 'Registration failed');
+            }
+        } catch (error) {
+            showTemporaryModal('Connection error. Please try again.');
+        }
+
 
     } catch (error) {
         console.error("Registration error:", error);

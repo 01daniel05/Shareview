@@ -9,7 +9,7 @@ if (window.location.hostname === 'localhost' ||
     API_BASE_URL = 'http://localhost:8080';
     console.log(' Running in LOCAL mode');
 } else if (window.location.hostname.includes('railway.app')) {
-    API_BASE_URL = 'shareview-backend-production.up.railway.app';
+    API_BASE_URL = 'https://shareview-backend-production.up.railway.app';
     console.log(' Running in PRODUCTION mode');
 } else {
     API_BASE_URL = 'https://shareview-1.onrender.com';
@@ -199,16 +199,6 @@ function switchProfileTab(e, tabName) {
             showTemporaryModal('Failed to load ' + tabName + ' content');
         });
     }, 50);
-}
-
-function removeRecentPost(event, button) {
-    event.stopPropagation();
-    const postItem = button.closest('.recent-post-item');
-    if (!postItem) return;
-    postItem.style.transition = 'opacity 0.28s, transform 0.28s';
-    postItem.style.opacity = '0';
-    postItem.style.transform = 'translateX(20px)';
-    setTimeout(() => postItem.remove(), 300);
 }
 
 // ============================================
@@ -936,19 +926,7 @@ function handleVideoClick(event, videoElement) {
     }
 }
 
-function handleVideoControlsClick(event, videoUrl, filename) {
-    event.stopPropagation();
-    maximizeVideo(videoUrl, filename);
-}
 
-function handleVideoMaximizeKeydown(e) {
-    if (e.key === 'Escape') {
-        closeMaximizedVideo();
-    } else if (e.key === ' ') {
-        e.preventDefault();
-        toggleMaximizedVideoPlay();
-    }
-}
 
 function showFeedSkeleton() {
     const newsFeed = document.getElementById('newsFeed');
@@ -970,17 +948,6 @@ function showFeedSkeleton() {
     `;
 }
 
-function closeMaximizedImage() {
-    const modal = document.querySelector('.image-maximize-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
-    }
-    document.removeEventListener('keydown', handleMaximizeKeydown);
-}
-
 function closeDownloadPermission() {
     const modal = document.querySelector('.download-permission-modal');
     if (modal) {
@@ -998,43 +965,6 @@ function handleDownloadPermissionKeydown(e) {
     }
 }
 
-function toggleVideoPlay(container) {
-    const video = container.querySelector('video');
-    const playBtn = container.querySelector('.video-play-btn i');
-    if (!video) return;
-    if (currentPlayingVideo && currentPlayingVideo !== video) {
-        currentPlayingVideo.pause();
-        const otherContainer = currentPlayingVideo.closest('.media-container');
-        if (otherContainer) {
-            otherContainer.classList.remove('video-playing');
-            const otherPlayBtn = otherContainer.querySelector('.video-play-btn i');
-            if (otherPlayBtn) {
-                otherPlayBtn.className = 'bx bx-play';
-            }
-        }
-    }
-    if (video.paused) {
-        video.play().then(() => {
-            container.classList.add('video-playing');
-            playBtn.className = 'bx bx-pause';
-            currentPlayingVideo = video;
-        }).catch(error => {
-            console.error('Error playing video:', error);
-            showTemporaryModal('Error playing video');
-        });
-    } else {
-        video.pause();
-        container.classList.remove('video-playing');
-        playBtn.className = 'bx bx-play';
-        currentPlayingVideo = null;
-    }
-}
-
-function handleMaximizeKeydown(e) {
-    if (e.key === 'Escape') {
-        closeMaximizedImage();
-    }
-}
 
 function initializePostCarousels() {
     document.querySelectorAll('.post-files-carousel').forEach(carousel => {
@@ -1180,7 +1110,6 @@ function initializeCarouselTouchEvents(carousel) {
         const diff = startX - endX;
         const swipeThreshold = 50;
         const tapThreshold = 200;
-        const isTap = (Date.now() - touchStartTime) < tapThreshold;
         if (Math.abs(diff) > swipeThreshold) {
             if (diff > 0) {
                 carousel.querySelector('.next')?.click();
@@ -1323,7 +1252,7 @@ function renderFileItem(file, post) {
     switch (file.type) {
         case 'image':
             return `
-                <div class="media-container" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'image', '${fullUrl}'); window.open('${fullUrl}', '_blank')">
+                <div class="media-container" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'image', '${fullUrl}'); previewFile('${fullUrl}', 'image', '${filename}')">
                     <img src="${fullUrl}" alt="${filename}" class="post-file-image" loading="lazy">
                 </div>
             `;
@@ -1335,7 +1264,7 @@ function renderFileItem(file, post) {
                         <source src="${fullUrl}" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                    <div class="video-controls-overlay" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); window.open('${fullUrl}', '_blank')">
+                    <div class="video-controls-overlay" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'video', ''); previewFile('${fullUrl}', 'video', '${filename}')">
                         <button class="video-play-btn">
                             <i class='bx bx-play'></i>
                         </button>
@@ -1344,7 +1273,7 @@ function renderFileItem(file, post) {
             `;
         case 'document':
             return `
-                <div class="post-file-document" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'document', ''); window.open('${fullUrl}', '_blank')">
+                <div class="post-file-document" onclick="recordRecentVisit(${post.id}, '${postTitle}', '${author}', 'document', ''); previewFile('${fullUrl}', 'document', '${filename}')">
                     <i class='bx bx-file'></i>
                     <div class="document-info">
                         <div class="document-name">${filename}</div>
@@ -1358,49 +1287,6 @@ function renderFileItem(file, post) {
         default:
             return '';
     }
-}
-function maximizeImage(imageUrl, filename) {
-    const modal = document.createElement('div');
-    modal.className = 'image-maximize-modal active';
-    modal.innerHTML = `
-    <div class="maximized-image-container">
-        <img src="${imageUrl}" class="maximized-image" onclick="event.stopPropagation()">
-        <div class="maximize-controls">
-            <div class="maximize-controls-right">
-                <button class="maximize-btn" onclick="requestDownloadPermission('${imageUrl}', '${filename}')">
-                    <i class='bx bx-download'></i>
-                </button>
-                <button class="maximize-btn" onclick="closeMaximizedImage()">
-                    <i class='bx bx-x'></i>
-                </button>
-            </div>
-        </div>
-    </div>
-`;
-    document.body.appendChild(modal);
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeMaximizedImage();
-        }
-    });
-    document.addEventListener('keydown', handleMaximizeKeydown);
-}
-
-function closeMaximizedVideo() {
-    if (currentMaximizedVideo) {
-        currentMaximizedVideo.pause();
-        currentMaximizedVideo = null;
-    }
-    const modal = document.querySelector('.video-maximize-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            if (modal.parentNode) {
-                modal.remove();
-            }
-        }, 300);
-    }
-    document.removeEventListener('keydown', handleVideoMaximizeKeydown);
 }
 
 function initializeVideoPlayers() {
@@ -1425,163 +1311,110 @@ function initializeVideoPlayers() {
     });
 }
 
-function updateMaximizedVideoControls(isPlaying) {
-    const playPauseIcon = document.querySelector('.video-maximize-modal .video-play-btn i');
-    if (playPauseIcon) {
-        playPauseIcon.className = isPlaying ? 'bx bx-pause' : 'bx bx-play';
-    }
-}
-
-function toggleMaximizedVideoPlay() {
-    if (!currentMaximizedVideo) return;
-    if (currentMaximizedVideo.paused) {
-        currentMaximizedVideo.play();
-    } else {
-        currentMaximizedVideo.pause();
-    }
-}
-
-function maximizeVideo(videoUrl, filename) {
-    if (currentPlayingVideo) {
-        currentPlayingVideo.pause();
-        const container = currentPlayingVideo.closest('.media-container');
-        if (container) {
-            container.classList.remove('video-playing');
-            const playBtn = container.querySelector('.video-play-btn i');
-            if (playBtn) {
-                playBtn.className = 'bx bx-play';
-            }
-        }
-        currentPlayingVideo = null;
-    }
-    const modal = document.createElement('div');
-    modal.className = 'video-maximize-modal active';
-    modal.innerHTML = `
-        <div class="maximized-video-container">
-            <video class="maximized-video" controls autoplay>
-                <source src="${videoUrl}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-            <div class="maximize-controls">
-                <div class="maximize-controls-right">
-                    <button class="maximize-btn" onclick="requestDownloadPermission('${videoUrl}', '${filename}')">
-                        <i class='bx bx-download'></i>
-                    </button>
-                    <button class="maximize-btn" onclick="closeMaximizedVideo()">
-                        <i class='bx bx-x'></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    const video = modal.querySelector('.maximized-video');
-    currentMaximizedVideo = video;
-    video.addEventListener('play', () => {
-        updateMaximizedVideoControls(true);
-    });
-    video.addEventListener('pause', () => {
-        updateMaximizedVideoControls(false);
-    });
-    video.addEventListener('loadeddata', () => {
-        modal.classList.remove('video-loading');
-    });
-    video.addEventListener('waiting', () => {
-        modal.classList.add('video-loading');
-    });
-    video.addEventListener('canplay', () => {
-        modal.classList.remove('video-loading');
-    });
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeMaximizedVideo();
-        }
-    });
-    document.addEventListener('keydown', handleVideoMaximizeKeydown);
-    video.play().catch(error => {
-        console.error('Error auto-playing maximized video:', error);
-        video.controls = true;
-    });
-}
-
-function closeDocumentPreview() {
-    const modal = document.querySelector('.document-preview-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
-    }
-    document.removeEventListener('keydown', handleDocumentPreviewKeydown);
-}
-
-function handleDocumentPreviewKeydown(e) {
-    if (e.key === 'Escape') {
-        closeDocumentPreview();
-    }
-}
 
 // ============================================
 // POST INTERACTION (Like, Save, Comments)
 // ============================================
+const likesInProgress = new Set();
+const savesInProgress = new Set();
+async function toggleLike(postId, button) {
+    // Prevent rapid multiple clicks
+    if (likesInProgress.has(postId)) {
+        return;
+    }
+    likesInProgress.add(postId);
 
-async function toggleLike(id, button) {
     const userId = localStorage.getItem('userId');
     if (!userId) {
         showTemporaryModal('Please log in to like posts');
+        likesInProgress.delete(postId);
         return;
     }
+
+    const postCard = button.closest('.post-card');
+    const likesSpan = postCard.querySelector('.post-stats span:first-child');
+    const currentLikes = parseInt(likesSpan.textContent) || 0;
+    const isCurrentlyLiked = button.classList.contains('active');
+
+    // Optimistic UI update
+    if (isCurrentlyLiked) {
+        button.innerHTML = '<i class="bx bx-like"></i> Like';
+        button.classList.remove('active');
+        likesSpan.textContent = `${currentLikes - 1} Likes`;
+    } else {
+        button.innerHTML = '<i class="bx bxs-like"></i> Liked';
+        button.classList.add('active');
+        likesSpan.textContent = `${currentLikes + 1} Likes`;
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/posts/${id}/like`, {
+        const response = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: parseInt(userId) })
         });
         const data = await response.json();
+
         if (response.ok && data.status === 'success') {
-            updateLikeButton(button, data.isLiked);
-            updateAllPostInstances(id, {
-                likesCount: data.likesCount,
-                isLiked: data.isLiked
-            });
+            // Sync with server's actual count
+            likesSpan.textContent = `${data.likesCount} Likes`;
+            updateAllPostInstances(postId, { likesCount: data.likesCount, isLiked: data.isLiked });
             const profilePage = document.getElementById('profilePage');
             if (profilePage && profilePage.classList.contains('active')) {
                 await updateProfileStats(userId);
             }
+        } else {
+            // Revert optimistic change
+            revertLike(postCard, isCurrentlyLiked, currentLikes);
+            showTemporaryModal(data.message || 'Failed to like post');
         }
     } catch (error) {
-        console.error('Failed to toggle like:', error);
-        showTemporaryModal('Failed to like post');
+        revertLike(postCard, isCurrentlyLiked, currentLikes);
+        showTemporaryModal('Error liking post');
+    } finally {
+        likesInProgress.delete(postId);
     }
 }
-
-async function toggleSave(id, button) {
+async function toggleSave(postId, button) {
     const userId = localStorage.getItem('userId');
     if (!userId) {
         showTemporaryModal('Please log in to save posts');
         return;
     }
+
+    // --- Optimistic update ---
+    const isCurrentlySaved = button.classList.contains('active');
+    if (isCurrentlySaved) {
+        button.innerHTML = '<i class="bx bx-bookmark"></i> Save';
+        button.classList.remove('active');
+    } else {
+        button.innerHTML = '<i class="bx bxs-bookmark"></i> Saved';
+        button.classList.add('active');
+    }
+
     try {
-        const response = await fetch(`${API_BASE_URL}/posts/${id}/save`, {
+        const response = await fetch(`${API_BASE_URL}/posts/${postId}/save`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: parseInt(userId) })
         });
         const data = await response.json();
         if (response.ok && data.status === 'success') {
-            updateSaveButton(button, data.isSaved);
-            updateAllPostInstances(id, {
-                isSaved: data.isSaved
-            });
-            showTemporaryModal(data.isSaved ? 'Post saved!' : 'Post unsaved!');
+            // Update all instances
+            updateAllPostInstances(postId, { isSaved: data.isSaved });
+            // Update profile stats if profile page is open
             const profilePage = document.getElementById('profilePage');
             if (profilePage && profilePage.classList.contains('active')) {
                 await updateProfileStats(userId);
             }
+        } else {
+            // Revert optimistic change
+            revertSave(button, isCurrentlySaved);
+            showTemporaryModal(data.message || 'Failed to save post');
         }
     } catch (error) {
-        console.error('Failed to toggle save:', error);
-        showTemporaryModal('Failed to save post');
+        revertSave(button, isCurrentlySaved);
+        showTemporaryModal('Error saving post');
     }
 }
 
@@ -1704,6 +1537,43 @@ async function sendComment(postId) {
         return;
     }
     const userId = localStorage.getItem('userId');
+
+    // --- Optimistic: create a temporary comment object ---
+    const tempComment = {
+        id: 'temp-' + Date.now(),
+        user: { firstName: localStorage.getItem('firstName') || 'You', lastName: '' },
+        content: content,
+        createdAt: new Date().toISOString()
+    };
+
+    // Add to UI immediately
+    const commentsList = document.getElementById(`commentsList${postId}`);
+    if (commentsList) {
+        const empty = commentsList.querySelector('.empty-comments');
+        if (empty) empty.remove();
+        const commentHtml = `
+            <div class="comment-item temp-comment" data-comment-id="${tempComment.id}">
+                <div class="comment-avatar">${getUserInitials(tempComment.user)}</div>
+                <div class="comment-content">
+                    <div class="comment-author">${tempComment.user.firstName} ${tempComment.user.lastName}</div>
+                    <div class="comment-text">${escapeHtml(tempComment.content)}</div>
+                    <div class="comment-time">Just now</div>
+                </div>
+            </div>
+        `;
+        commentsList.insertAdjacentHTML('afterbegin', commentHtml);
+    }
+
+    // Update comment count optimistically
+    const postCard = document.querySelector(`[data-post-id="${postId}"]`);
+    const commentsSpan = postCard?.querySelector('.post-stats span:nth-child(2)');
+    const currentCount = parseInt(commentsSpan?.textContent?.match(/\d+/)?.[0] || 0);
+    if (commentsSpan) {
+        commentsSpan.textContent = `${currentCount + 1} Comments`;
+    }
+
+    input.value = '';
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/comments/post/${postId}`, {
             method: 'POST',
@@ -1711,24 +1581,39 @@ async function sendComment(postId) {
             body: JSON.stringify({ content: content, userId: userId })
         });
         const data = await response.json();
-        if (response.ok && data.status === 'success') {
-            input.value = '';
-            await loadComments(postId);
-            const postCard = document.querySelector(`[data-post-id="${postId}"]`);
-            const commentsSpan = postCard.querySelector('.post-stats span:nth-child(2)');
-            if (commentsSpan) {
-                const currentCount = parseInt(commentsSpan.textContent.match(/\d+/)[0]);
-                commentsSpan.textContent = `${currentCount + 1} Comments`;
+        if (response.ok && data.status === 'success' && data.comment) {
+            // Replace temp comment with real one (update ID and time)
+            const tempElement = commentsList.querySelector(`[data-comment-id="${tempComment.id}"]`);
+            if (tempElement) {
+                tempElement.dataset.commentId = data.comment.id;
+                // Optionally update timestamp if needed
+                const timeEl = tempElement.querySelector('.comment-time');
+                if (timeEl) timeEl.textContent = formatTime(data.comment.createdAt);
             }
+            // Update profile stats if profile page is open
             const profilePage = document.getElementById('profilePage');
             if (profilePage && profilePage.classList.contains('active')) {
-                updateProfileStats(userId);
+                await updateProfileStats(userId);
             }
         } else {
+            // Server failed – remove the optimistic comment
+            const tempElement = commentsList.querySelector(`[data-comment-id="${tempComment.id}"]`);
+            if (tempElement) tempElement.remove();
+            // Decrement comment count
+            if (commentsSpan) {
+                const current = parseInt(commentsSpan.textContent.match(/\d+/)?.[0] || 1) - 1;
+                commentsSpan.textContent = `${current} Comments`;
+            }
             showTemporaryModal(data.message || 'Failed to add comment');
         }
     } catch (error) {
-        console.error('Error adding comment:', error);
+        // Network error – remove optimistic comment
+        const tempElement = commentsList?.querySelector(`[data-comment-id="${tempComment.id}"]`);
+        if (tempElement) tempElement.remove();
+        if (commentsSpan) {
+            const current = parseInt(commentsSpan.textContent.match(/\d+/)?.[0] || 1) - 1;
+            commentsSpan.textContent = `${current} Comments`;
+        }
         showTemporaryModal('Error adding comment');
     }
 }
@@ -2227,30 +2112,186 @@ async function deletePost(event, postId) {
     });
 }
 
-async function reportPost(event, postId) {
+// ============================================
+// REPORT POST WITH REASON SELECTION
+// ============================================
+
+function reportPost(event, postId) {
     event.stopPropagation();
     closePostMenus();
-    showConfirmModal('Are you sure you want to report this post?', async () => {
+    showReportReasonModal(postId);
+}
+
+function showReportReasonModal(postId) {
+    // Remove any existing report modal
+    document.querySelector('.report-modal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.className = 'report-modal active';
+    modal.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        z-index: 99999 !important;
+        backdrop-filter: blur(4px) !important;
+    `;
+
+    const reasons = [
+        { value: 'spam', label: 'Spam or misleading' },
+        { value: 'harassment', label: 'Harassment or bullying' },
+        { value: 'inappropriate', label: 'Inappropriate content' },
+        { value: 'hate_speech', label: 'Hate speech or discrimination' },
+        { value: 'violence', label: 'Violent or harmful content' },
+        { value: 'other', label: 'Other' }
+    ];
+
+    let selectedReason = reasons[0].value;
+
+    modal.innerHTML = `
+        <div class="report-modal-content" style="
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            position: relative;
+            z-index: 100000;
+            animation: modalSlideIn 0.3s ease;
+        ">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; font-size:20px; color:#1e293b;">Report Post</h3>
+                <button class="report-close-btn" onclick="this.closest('.report-modal').remove()" style="
+                    background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8;
+                ">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+            <p style="color:#64748b; margin-bottom:20px;">Please select a reason for reporting this post:</p>
+            <div class="report-reasons-list" style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px;">
+                ${reasons.map(r => `
+                    <button class="report-reason-btn" data-value="${r.value}" style="
+                        padding:12px 16px;
+                        border:2px solid #e2e8f0;
+                        border-radius:10px;
+                        background:white;
+                        cursor:pointer;
+                        text-align:left;
+                        font-size:14px;
+                        transition: all 0.2s;
+                        color: #334155;
+                        ${r.value === selectedReason ? 'border-color: #4f46e5; background: #eef2ff;' : ''}
+                    ">
+                        ${r.label}
+                    </button>
+                `).join('')}
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button class="report-cancel-btn" onclick="this.closest('.report-modal').remove()" style="
+                    padding:10px 20px;
+                    border:none;
+                    border-radius:8px;
+                    font-weight:600;
+                    background:#f1f5f9;
+                    color:#64748b;
+                    cursor:pointer;
+                ">
+                    Cancel
+                </button>
+                <button class="report-submit-btn" style="
+                    padding:10px 24px;
+                    border:none;
+                    border-radius:8px;
+                    font-weight:600;
+                    background:#ef4444;
+                    color:white;
+                    cursor:pointer;
+                    display:flex;
+                    align-items:center;
+                    gap:6px;
+                ">
+                    <i class='bx bx-flag'></i> Report
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Reason selection
+    const reasonBtns = modal.querySelectorAll('.report-reason-btn');
+    reasonBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            reasonBtns.forEach(b => {
+                b.style.borderColor = '#e2e8f0';
+                b.style.background = 'white';
+            });
+            this.style.borderColor = '#4f46e5';
+            this.style.background = '#eef2ff';
+            selectedReason = this.dataset.value;
+        });
+    });
+
+    // Submit
+    const submitBtn = modal.querySelector('.report-submit-btn');
+    submitBtn.addEventListener('click', async function() {
+        // Disable button to prevent double submit
+        this.disabled = true;
+        this.textContent = 'Submitting...';
+
         try {
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                showTemporaryModal('Please log in to report posts.');
+                modal.remove();
+                return;
+            }
+
             const response = await fetch(`${API_BASE_URL}/posts/${postId}/report`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    userId: localStorage.getItem('userId'),
-                    reason: 'User reported this post'
+                    userId: parseInt(userId),
+                    reason: selectedReason
                 })
             });
+
             const data = await response.json();
+            modal.remove();
+
             if (response.ok && data.status === 'success') {
                 showTemporaryModal('Post reported. Thank you for helping keep our community safe.');
             } else {
-                showTemporaryModal(data.message || 'Failed to report post');
+                showTemporaryModal(data.message || 'Failed to report post. Please try again.');
             }
         } catch (error) {
             console.error('Error reporting post:', error);
-            showTemporaryModal('Error reporting post');
+            showTemporaryModal('Error reporting post. Please try again.');
+            modal.remove();
         }
     });
+
+    // Close on backdrop click
+    modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.remove();
+        }
+    });
+
+    // Close on Escape key
+    const closeHandler = function(e) {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', closeHandler);
+        }
+    };
+    document.addEventListener('keydown', closeHandler);
 }
 
 // ============================================
@@ -2919,17 +2960,23 @@ function removeQuizQuestion(index) {
     renderQuizQuestionList();
 }
 
-function saveReviewerFromSession() {
+async function saveReviewerFromSession() {
     if (!studySession) {
         showTemporaryModal('No study session active.');
         return;
     }
+
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+        showTemporaryModal('Please log in to save reviewers.');
+        return;
+    }
+
     const meta = studySession.meta || {};
-    showDescriptionPromptModal((description) => {
-        const userId = localStorage.getItem('userId') || 'guest';
-        const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-        saved.unshift({
-            id: Date.now(),
+
+    showDescriptionPromptModal(async (description) => {
+        const payload = {
+            userId: parseInt(userId),
             type: studySession.type,
             items: studySession.originalItems,
             style: meta.style || null,
@@ -2937,12 +2984,30 @@ function saveReviewerFromSession() {
             sourceFileName: meta.sourceFileName || null,
             sourceFileType: meta.sourceFileType || null,
             sourceFileUrl: meta.sourceFileUrl || null,
-            description: description || 'No description provided',
-            createdAt: new Date().toISOString()
-        });
-        localStorage.setItem(`savedReviewers_${userId}`, JSON.stringify(saved));
-        showTemporaryModal('Reviewer saved to your profile!');
-        closeStudySession();
+            description: description || 'No description provided'
+        };
+
+        try {
+            showLoadingModal('Saving reviewer...');
+            const response = await fetch(`${API_BASE_URL}/reviewer/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            hideLoadingModal();
+
+            if (response.ok && data.status === 'success') {
+                showTemporaryModal('Reviewer saved to your profile!');
+                closeStudySession();
+            } else {
+                showTemporaryModal(data.message || 'Failed to save reviewer.');
+            }
+        } catch (error) {
+            hideLoadingModal();
+            console.error('Error saving reviewer:', error);
+            showTemporaryModal('Server error while saving reviewer.');
+        }
     });
 }
 
@@ -2956,63 +3021,55 @@ function saveReviewer() {
         showTemporaryModal('Please add at least one item.');
         return;
     }
-    showDescriptionPromptModal((description) => {
-        const userId = localStorage.getItem('userId') || 'guest';
-        const saved = JSON.parse(localStorage.getItem(`savedReviewers_${userId}`) || '[]');
-        let fileData = null;
-        if (reviewerState.sourceFileData) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                fileData = {
-                    name: reviewerState.sourceFileName,
-                    type: reviewerState.sourceFileType,
-                    data: e.target.result
-                };
-                saveReviewerWithFileData(fileData, description);
-            };
-            reader.readAsDataURL(reviewerState.sourceFileData);
+
+    showDescriptionPromptModal(async (description) => {
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+            showTemporaryModal('Please log in to save reviewers.');
             return;
         }
-        saveReviewerWithFileData(null, description);
+
+        const payload = {
+            userId: parseInt(userId),
+            type: reviewerState.type,
+            items: items,
+            style: reviewerState.style || null,
+            difficulty: reviewerState.difficulty || null,
+            sourceFileName: reviewerState.sourceFileName || null,
+            sourceFileType: reviewerState.sourceFileType || null,
+            sourceFileUrl: reviewerState.sourceFileUrl || null,
+            description: description || 'No description provided'
+        };
+
+        try {
+            showLoadingModal('Saving reviewer...');
+            const response = await fetch(`${API_BASE_URL}/reviewer/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            hideLoadingModal();
+
+            if (response.ok && data.status === 'success') {
+                showTemporaryModal('Reviewer saved successfully!');
+                // Reset state and close creator
+                reviewerState = {
+                    type: null, flashcards: [], quizQuestions: [], style: null,
+                    difficulty: null, sourceFileName: null, sourceFileType: null,
+                    sourceFileUrl: null, sourceFileData: null
+                };
+                closeReviewerCreator();
+            } else {
+                showTemporaryModal(data.message || 'Failed to save reviewer.');
+            }
+        } catch (error) {
+            hideLoadingModal();
+            console.error('Error saving reviewer:', error);
+            showTemporaryModal('Server error while saving reviewer.');
+        }
     });
 }
-
-async function saveReviewerWithFileData(fileData, description) {
-    const payload = {
-        userId: localStorage.getItem('userId'),
-        type: reviewerState.type,
-        items: reviewerState.type === 'flashcards' ? reviewerState.flashcards : reviewerState.quizQuestions,
-        style: reviewerState.style || null,
-        difficulty: reviewerState.difficulty || null,
-        sourceFileName: reviewerState.sourceFileName || null,
-        sourceFileType: reviewerState.sourceFileType || null,
-        sourceFileUrl: reviewerState.sourceFileUrl || null,
-        description: description || 'No description provided'
-    };
-    try {
-        const response = await fetch(`${API_BASE_URL}/reviewer/save`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        if (response.ok && data.status === 'success') {
-            showTemporaryModal('Reviewer saved successfully!');
-        } else {
-            showTemporaryModal(data.message || 'Failed to save reviewer.');
-        }
-    } catch (error) {
-        console.error('Error saving reviewer:', error);
-        showTemporaryModal('Server error while saving reviewer.');
-    }
-    reviewerState = {
-        type: null, flashcards: [], quizQuestions: [], style: null,
-        difficulty: null, sourceFileName: null, sourceFileType: null,
-        sourceFileUrl: null, sourceFileData: null
-    };
-    closeReviewerCreator();
-}
-
 // ============================================
 // REVIEWER SHARING (Newsfeed)
 // ============================================
@@ -3834,82 +3891,216 @@ async function openMyReviewers() {
         console.error('Failed to load reviewers:', error);
     }
     window._savedReviewersCache = list;
+
     const styleLabel = (s) => ({
         definition: 'Definition Focused',
         conceptual: 'Conceptual',
         exam: 'Exam Style',
         identification: 'Identification'
     })[s] || 'Conceptual';
+
+    // Remove any existing modal
+    document.querySelector('.my-reviewers-modal')?.remove();
+
     const modal = document.createElement('div');
-    modal.className = 'modal-overlay active';
-    modal.innerHTML = `
-        <div class="modal-content" style="width:90%;max-width:700px;max-height:80vh;overflow-y:auto;padding:0;">
-            <div class="modal-header" style="padding:20px 24px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:white;z-index:10;border-radius:12px 12px 0 0;">
-                <h3 style="margin:0;font-size:20px;color:#1e293b;">My Saved Reviewers</h3>
-                <button class="close-modal" onclick="this.closest('.modal-overlay').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#94a3b8;">
-                    <i class='bx bx-x'></i>
-                </button>
+    modal.className = 'my-reviewers-modal active';
+
+    let bodyContent = '';
+    if (list.length === 0) {
+        bodyContent = `
+            <div class="my-reviewers-empty">
+                <i class='bx bx-book-bookmark'></i>
+                <div class="empty-state-text">No saved reviewers yet</div>
+                <div class="empty-state-subtext">Create and save reviewers to see them here</div>
             </div>
-            <div class="modal-body" style="padding:20px 24px;">
-                ${list.length === 0
-        ? `<div class="empty-state" style="text-align:center;padding:40px 0;">
-                        <i class='bx bx-book-bookmark' style="font-size:48px;color:#cbd5e1;"></i>
-                        <div class="empty-state-text" style="font-size:16px;color:#64748b;margin-top:12px;">No saved reviewers yet</div>
-                        <div class="empty-state-subtext" style="font-size:14px;color:#94a3b8;margin-top:4px;">Create and save reviewers to see them here</div>
-                    </div>`
-        : list.map(r => {
+        `;
+    } else {
+        bodyContent = list.map(r => {
             const typeIcon = r.type === 'flashcards' ? 'bx-card' : 'bx-question-mark';
             const typeLabel = r.type === 'flashcards' ? 'Flashcards' : 'Quiz';
             const styleText = styleLabel(r.style);
             const hasFileUrl = !!r.sourceFileUrl;
             return `
-        <div class="reviewer-card">
-            <div class="reviewer-card-top">
-                <div class="reviewer-icon"><i class='bx ${typeIcon}'></i></div>
-                <div class="reviewer-meta">
-                    <div class="reviewer-title">${typeLabel} Reviewer</div>
-                    <div class="reviewer-sub">${r.items.length} items · ${styleText}${r.difficulty ? ' · ' + escapeHtml(r.difficulty) : ''}</div>
+                <div class="reviewer-card">
+                    <div class="reviewer-card-top">
+                        <div class="reviewer-icon"><i class='bx ${typeIcon}'></i></div>
+                        <div class="reviewer-meta">
+                            <div class="reviewer-title">${typeLabel} Reviewer</div>
+                            <div class="reviewer-sub">${r.items.length} items · ${styleText}${r.difficulty ? ' · ' + escapeHtml(r.difficulty) : ''}</div>
+                        </div>
+                    </div>
+                    ${r.description ? `<p class="reviewer-desc">${escapeHtml(r.description)}</p>` : ''}
+                    <div class="reviewer-card-footer">
+                        ${r.sourceFileName ? `
+                            <button class="reviewer-file-chip ${hasFileUrl ? '' : 'disabled'}"
+                                    onclick="${hasFileUrl ? `downloadSavedReviewerFile(${r.id})` : ''}"
+                                    title="${escapeHtml(r.sourceFileName)}"
+                                    ${hasFileUrl ? '' : 'disabled'}>
+                                <i class='bx bx-file'></i>
+                                <span>${escapeHtml(truncateFilename(r.sourceFileName, 16))}</span>
+                                ${hasFileUrl ? `<i class='bx bx-download reviewer-file-chip-icon'></i>` : ''}
+                            </button>
+                        ` : `
+                            <span class="reviewer-manual-tag">Manually created</span>
+                        `}
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button class="reviewer-icon-btn" onclick="editSavedReviewerDescription(${r.id})" title="Edit">
+                                <i class='bx bx-edit'></i>
+                            </button>
+                            <button class="reviewer-icon-btn danger" onclick="deleteSavedReviewer(${r.id})" title="Delete">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                            <button class="reviewer-study-btn" onclick="studyFromSaved(${r.id})">
+                                Study <i class='bx bx-right-arrow-alt'></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-
-            ${r.description ? `<p class="reviewer-desc">${escapeHtml(r.description)}</p>` : ''}
-
-            <div class="reviewer-card-footer">
-                ${r.sourceFileName ? `
-                    <button class="reviewer-file-chip ${hasFileUrl ? '' : 'disabled'}"
-                            onclick="${hasFileUrl ? `downloadSavedReviewerFile(${r.id})` : ''}"
-                            title="${escapeHtml(r.sourceFileName)}"
-                            ${hasFileUrl ? '' : 'disabled'}>
-                        <i class='bx bx-file'></i>
-                        <span>${escapeHtml(truncateFilename(r.sourceFileName, 16))}</span>
-                        ${hasFileUrl ? `<i class='bx bx-download reviewer-file-chip-icon'></i>` : ''}
-                    </button>
-                ` : `
-                    <span class="reviewer-manual-tag">Manually created</span>
-                `}
-
-                <div style="display:flex; gap:6px;">
-                    <button class="reviewer-icon-btn" onclick="editSavedReviewerDescription(${r.id})" title="Edit">
-                        <i class='bx bx-edit'></i>
-                    </button>
-                    <button class="reviewer-icon-btn danger" onclick="deleteSavedReviewer(${r.id})" title="Delete">
-                        <i class='bx bx-trash'></i>
-                    </button>
-                    <button class="reviewer-study-btn" onclick="studyFromSaved(${r.id})">
-                        Study <i class='bx bx-right-arrow-alt'></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-        }).join('')
+            `;
+        }).join('');
     }
+
+    modal.innerHTML = `
+        <div class="my-reviewers-modal-content">
+            <div class="my-reviewers-modal-header">
+                <h3>My Saved Reviewers</h3>
+                <button class="my-reviewers-modal-close" onclick="this.closest('.my-reviewers-modal').remove()">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+            <div class="my-reviewers-modal-body">
+                ${bodyContent}
             </div>
         </div>
     `;
+
     document.body.appendChild(modal);
+
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
+    // Close on Escape key
+    const closeHandler = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', closeHandler);
+        }
+    };
+    document.addEventListener('keydown', closeHandler);
+}
+function openEditProfile() {
+    // Remove existing modal
+    document.querySelector('.edit-profile-modal')?.remove();
+
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+        showTemporaryModal('Please log in first.');
+        return;
+    }
+
+    // Fetch current user data
+    fetch(`${API_BASE_URL}/users/${userId}`)
+        .then(res => res.json())
+        .then(user => {
+            const modal = document.createElement('div');
+            modal.className = 'edit-profile-modal active';
+            modal.innerHTML = `
+                <div class="edit-profile-content">
+                    <div class="edit-profile-header">
+                        <h3>Edit Profile</h3>
+                        <button class="profile-edit-btn" onclick="openEditProfile()">
+                            <i class='bx bx-edit-alt'></i> Edit Profile
+                        </button>
+                    </div>
+                    <div class="edit-profile-body">
+                        <div class="form-group">
+                            <label>First Name</label>
+                            <input type="text" id="editFirstName" value="${escapeHtml(user.firstName || '')}" placeholder="First name">
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name</label>
+                            <input type="text" id="editLastName" value="${escapeHtml(user.lastName || '')}" placeholder="Last name">
+                        </div>
+                        <div class="form-group">
+                            <label>Bio</label>
+                            <textarea id="editBio" placeholder="Tell us about yourself...">${escapeHtml(user.bio || '')}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="editEmail" value="${escapeHtml(user.email || '')}" placeholder="Email" disabled>
+                            <small style="color:#94a3b8; font-size:12px;">Email cannot be changed</small>
+                        </div>
+                    </div>
+                    <div class="edit-profile-footer">
+                        <button class="btn-secondary" onclick="this.closest('.edit-profile-modal').remove()">Cancel</button>
+                        <button class="btn-primary" onclick="saveProfileChanges()">Save Changes</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+
+            // Close on Escape
+            const closeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    modal.remove();
+                    document.removeEventListener('keydown', closeHandler);
+                }
+            };
+            document.addEventListener('keydown', closeHandler);
+        })
+        .catch(err => {
+            console.error('Failed to load profile:', err);
+            showTemporaryModal('Failed to load profile data.');
+        });
 }
 
+async function saveProfileChanges() {
+    const userId = localStorage.getItem('userId');
+    const firstName = document.getElementById('editFirstName').value.trim();
+    const lastName = document.getElementById('editLastName').value.trim();
+    const bio = document.getElementById('editBio').value.trim();
+
+    if (!firstName || !lastName) {
+        showTemporaryModal('First and last name are required.');
+        return;
+    }
+
+    try {
+        showLoadingModal('Saving profile...');
+        const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ firstName, lastName, bio })
+        });
+        const data = await response.json();
+        hideLoadingModal();
+
+        if (response.ok) {
+            showTemporaryModal('Profile updated successfully!');
+            document.querySelector('.edit-profile-modal')?.remove();
+            // Update sidebar and profile page
+            updateUserProfileCard();
+            loadUserProfile();
+        } else {
+            showTemporaryModal(data.message || 'Failed to update profile.');
+        }
+    } catch (error) {
+        hideLoadingModal();
+        console.error('Error updating profile:', error);
+        showTemporaryModal('Server error while updating profile.');
+    }
+}
 function editSavedReviewerDescription(id) {
     const reviewer = (window._savedReviewersCache || []).find(r => r.id === id);
     if (!reviewer) {
@@ -3959,14 +4150,6 @@ async function updateSavedReviewerDescription(id) {
     openMyReviewers();
 }
 
-function downloadSavedReviewerFile(id) {
-    const reviewer = (window._savedReviewersCache || []).find(r => r.id === id);
-    if (!reviewer || !reviewer.sourceFileUrl) {
-        showTemporaryModal('No source file available for this reviewer.');
-        return;
-    }
-    requestDownloadPermission(reviewer.sourceFileUrl, reviewer.sourceFileName);
-}
 
 function studyFromSaved(id) {
     const r = (window._savedReviewersCache || []).find(x => x.id === id);
@@ -4200,34 +4383,6 @@ function handleFilePreviewKeydown(e) {
     if (e.key === 'Escape') {
         closeFilePreview();
     }
-}
-
-function getFileType(url, fileType) {
-    // If we have a file type from the server, use it
-    if (fileType) {
-        if (fileType.startsWith('image/')) return 'image';
-        if (fileType.startsWith('video/')) return 'video';
-        if (fileType.startsWith('application/') ||
-            fileType.includes('document') ||
-            fileType.includes('pdf') ||
-            fileType.includes('word') ||
-            fileType.includes('excel')) return 'document';
-    }
-
-    // Otherwise detect from URL
-    if (url) {
-        const urlLower = url.toLowerCase();
-        if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/)) return 'image';
-        if (urlLower.match(/\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/)) return 'video';
-        if (urlLower.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|zip|rar|7z|gz)$/)) return 'document';
-
-        // Check Cloudinary URL patterns
-        if (urlLower.includes('image')) return 'image';
-        if (urlLower.includes('video')) return 'video';
-        if (urlLower.includes('raw') || urlLower.includes('document') || urlLower.includes('file')) return 'document';
-    }
-
-    return 'document';
 }
 function getFileType(url, fileType) {
     // If we have a file type from the server, use it
